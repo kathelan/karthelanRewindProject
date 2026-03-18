@@ -1,0 +1,14 @@
+services:
+  soap-service:
+    build:
+      context: .
+      dockerfile: soap-service/Dockerfile
+    ports:
+      - "8080:8080"
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    ports:
+      - "8081:8081"
