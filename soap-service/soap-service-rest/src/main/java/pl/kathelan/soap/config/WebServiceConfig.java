@@ -9,6 +9,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.ws.config.annotation.EnableWs;
 import org.springframework.ws.config.annotation.WsConfigurerAdapter;
 import org.springframework.ws.server.EndpointInterceptor;
+import org.springframework.ws.soap.server.endpoint.interceptor.PayloadValidatingInterceptor;
 import org.springframework.ws.soap.security.wss4j2.Wss4jSecurityInterceptor;
 import org.springframework.ws.transport.http.MessageDispatcherServlet;
 import org.springframework.ws.wsdl.wsdl11.DefaultWsdl11Definition;
@@ -26,7 +27,18 @@ public class WebServiceConfig extends WsConfigurerAdapter {
 
     @Override
     public void addInterceptors(List<EndpointInterceptor> interceptors) {
+        // Kolejność ma znaczenie: najpierw auth, potem walidacja
         interceptors.add(wsSecurityInterceptor);
+        interceptors.add(payloadValidatingInterceptor());
+    }
+
+    @Bean
+    public PayloadValidatingInterceptor payloadValidatingInterceptor() {
+        PayloadValidatingInterceptor interceptor = new PayloadValidatingInterceptor();
+        interceptor.setSchema(new ClassPathResource("users.xsd"));
+        interceptor.setValidateRequest(true);
+        interceptor.setValidateResponse(false);
+        return interceptor;
     }
 
     @Bean
