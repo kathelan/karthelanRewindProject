@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import pl.kathelan.soap.api.generated.Address;
@@ -22,7 +22,6 @@ import pl.kathelan.user.mapper.UserRestMapper;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -38,10 +37,10 @@ class UserControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private UserSoapClient userSoapClient;
 
-    @MockBean
+    @MockitoBean
     private UserRestMapper mapper;
 
     @Test
@@ -119,7 +118,7 @@ class UserControllerTest {
         cityResponse.getUsers().addAll(List.of(
                 buildUserDto("id-1", "a@example.com"),
                 buildUserDto("id-2", "b@example.com")));
-        when(userSoapClient.getUsersByCity(eq("Warsaw"))).thenReturn(cityResponse);
+        when(userSoapClient.getUsersByCity("Warsaw")).thenReturn(cityResponse);
         when(mapper.toDto(any())).thenReturn(
                 new pl.kathelan.user.api.dto.UserDto("id-1", "A", "B", "a@example.com",
                         new AddressDto("ul.", "Warsaw", "00-001", "Poland")));
@@ -131,7 +130,7 @@ class UserControllerTest {
 
     @Test
     void shouldReturn200WithEmptyListWhenNoCityMatch() throws Exception {
-        when(userSoapClient.getUsersByCity(eq("Berlin"))).thenReturn(new GetUsersByCityResponse());
+        when(userSoapClient.getUsersByCity("Berlin")).thenReturn(new GetUsersByCityResponse());
 
         mockMvc.perform(get("/users").param("city", "Berlin"))
                 .andExpect(status().isOk())
