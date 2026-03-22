@@ -4,6 +4,21 @@
            targetNamespace="http://kathelan.pl/soap/users"
            elementFormDefault="qualified">
 
+    <!-- ===== Restricted simple types ===== -->
+
+    <xs:simpleType name="NonEmptyString">
+        <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="EmailString">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[^@\s]+@[^@\s]+\.[^@\s]+"/>
+            <xs:minLength value="5"/>
+        </xs:restriction>
+    </xs:simpleType>
+
     <!-- ===== Common types ===== -->
 
     <xs:simpleType name="ErrorCode">
@@ -17,19 +32,19 @@
 
     <xs:complexType name="Address">
         <xs:sequence>
-            <xs:element name="street"  type="xs:string"/>
-            <xs:element name="city"    type="xs:string"/>
-            <xs:element name="zipCode" type="xs:string"/>
-            <xs:element name="country" type="xs:string"/>
+            <xs:element name="street"  type="tns:NonEmptyString"/>
+            <xs:element name="city"    type="tns:NonEmptyString"/>
+            <xs:element name="zipCode" type="tns:NonEmptyString"/>
+            <xs:element name="country" type="tns:NonEmptyString"/>
         </xs:sequence>
     </xs:complexType>
 
     <xs:complexType name="UserDto">
         <xs:sequence>
             <xs:element name="id"        type="xs:string"/>
-            <xs:element name="firstName" type="xs:string"/>
-            <xs:element name="lastName"  type="xs:string"/>
-            <xs:element name="email"     type="xs:string"/>
+            <xs:element name="firstName" type="tns:NonEmptyString"/>
+            <xs:element name="lastName"  type="tns:NonEmptyString"/>
+            <xs:element name="email"     type="tns:EmailString"/>
             <xs:element name="address"   type="tns:Address"/>
         </xs:sequence>
     </xs:complexType>
@@ -39,7 +54,7 @@
     <xs:element name="getUserRequest">
         <xs:complexType>
             <xs:sequence>
-                <xs:element name="id" type="xs:string"/>
+                <xs:element name="id" type="tns:NonEmptyString"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
@@ -47,9 +62,9 @@
     <xs:element name="getUserResponse">
         <xs:complexType>
             <xs:sequence>
-                <xs:element name="user"      type="tns:UserDto" minOccurs="0"/>
+                <xs:element name="user"      type="tns:UserDto"   minOccurs="0"/>
                 <xs:element name="errorCode" type="tns:ErrorCode" minOccurs="0"/>
-                <xs:element name="message"   type="xs:string" minOccurs="0"/>
+                <xs:element name="message"   type="xs:string"     minOccurs="0"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
@@ -59,9 +74,9 @@
     <xs:element name="createUserRequest">
         <xs:complexType>
             <xs:sequence>
-                <xs:element name="firstName" type="xs:string"/>
-                <xs:element name="lastName"  type="xs:string"/>
-                <xs:element name="email"     type="xs:string"/>
+                <xs:element name="firstName" type="tns:NonEmptyString"/>
+                <xs:element name="lastName"  type="tns:NonEmptyString"/>
+                <xs:element name="email"     type="tns:EmailString"/>
                 <xs:element name="address"   type="tns:Address"/>
             </xs:sequence>
         </xs:complexType>
@@ -70,9 +85,9 @@
     <xs:element name="createUserResponse">
         <xs:complexType>
             <xs:sequence>
-                <xs:element name="user"      type="tns:UserDto" minOccurs="0"/>
+                <xs:element name="user"      type="tns:UserDto"   minOccurs="0"/>
                 <xs:element name="errorCode" type="tns:ErrorCode" minOccurs="0"/>
-                <xs:element name="message"   type="xs:string" minOccurs="0"/>
+                <xs:element name="message"   type="xs:string"     minOccurs="0"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
@@ -82,7 +97,7 @@
     <xs:element name="getUsersByCityRequest">
         <xs:complexType>
             <xs:sequence>
-                <xs:element name="city" type="xs:string"/>
+                <xs:element name="city" type="tns:NonEmptyString"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
@@ -90,9 +105,9 @@
     <xs:element name="getUsersByCityResponse">
         <xs:complexType>
             <xs:sequence>
-                <xs:element name="users"     type="tns:UserDto" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element name="users"     type="tns:UserDto"   minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element name="errorCode" type="tns:ErrorCode" minOccurs="0"/>
-                <xs:element name="message"   type="xs:string" minOccurs="0"/>
+                <xs:element name="message"   type="xs:string"     minOccurs="0"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
