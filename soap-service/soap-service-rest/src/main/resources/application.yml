@@ -4,3 +4,11 @@ server:
 spring:
   application:
     name: soap-service
+  profiles:
+    active: local
+
+soap:
+  security:
+    users:
+      admin: adminpass
+      user: userpass
