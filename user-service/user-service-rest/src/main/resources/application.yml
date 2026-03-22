@@ -4,3 +4,11 @@ server:
 spring:
   application:
     name: user-service
+
+soap:
+  client:
+    url: http://localhost:8080/ws
+    username: admin
+    password: adminpass
+    connect-timeout-ms: 5000
+    read-timeout-ms: 10000
