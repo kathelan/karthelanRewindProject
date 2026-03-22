@@ -14,7 +14,7 @@ import pl.kathelan.soap.repository.UserRepository;
 
 import java.util.Map;
 
-import static org.springframework.ws.test.server.RequestCreators.withPayload;
+import static org.springframework.ws.test.server.RequestCreators.withSoapEnvelope;
 import static org.springframework.ws.test.server.ResponseMatchers.noFault;
 import static org.springframework.ws.test.server.ResponseMatchers.xpath;
 
@@ -24,6 +24,11 @@ class UserEndpointIntegrationTest {
 
     private static final String NS = "http://kathelan.pl/soap/users";
     private static final Map<String, String> NS_MAP = Map.of("tns", NS);
+
+    private static final String WSSE_NS =
+            "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd";
+    private static final String PW_TEXT_TYPE =
+            "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText";
 
     @Autowired
     private ApplicationContext context;
@@ -40,7 +45,7 @@ class UserEndpointIntegrationTest {
 
     @Test
     void shouldCreateUser() throws Exception {
-        client.sendRequest(withPayload(new StringSource("""
+        client.sendRequest(withSoapEnvelope(envelope("""
                 <tns:createUserRequest xmlns:tns="%s">
                     <tns:firstName>Jan</tns:firstName>
                     <tns:lastName>Kowalski</tns:lastName>
@@ -64,7 +69,7 @@ class UserEndpointIntegrationTest {
     void shouldGetUserById() throws Exception {
         String id = saveUser("anna@example.com", "Warsaw");
 
-        client.sendRequest(withPayload(new StringSource("""
+        client.sendRequest(withSoapEnvelope(envelope("""
                 <tns:getUserRequest xmlns:tns="%s">
                     <tns:id>%s</tns:id>
                 </tns:getUserRequest>
@@ -76,7 +81,7 @@ class UserEndpointIntegrationTest {
 
     @Test
     void shouldReturnErrorWhenUserNotFound() throws Exception {
-        client.sendRequest(withPayload(new StringSource("""
+        client.sendRequest(withSoapEnvelope(envelope("""
                 <tns:getUserRequest xmlns:tns="%s">
                     <tns:id>nonexistent-id</tns:id>
                 </tns:getUserRequest>
@@ -90,7 +95,7 @@ class UserEndpointIntegrationTest {
     void shouldReturnErrorOnDuplicateEmail() throws Exception {
         saveUser("dup@example.com", "Warsaw");
 
-        client.sendRequest(withPayload(new StringSource("""
+        client.sendRequest(withSoapEnvelope(envelope("""
                 <tns:createUserRequest xmlns:tns="%s">
                     <tns:firstName>Other</tns:firstName>
                     <tns:lastName>Person</tns:lastName>
@@ -114,7 +119,7 @@ class UserEndpointIntegrationTest {
         saveUser("city2@example.com", "Gdansk");
         saveUser("city3@example.com", "Poznan");
 
-        client.sendRequest(withPayload(new StringSource("""
+        client.sendRequest(withSoapEnvelope(envelope("""
                 <tns:getUsersByCityRequest xmlns:tns="%s">
                     <tns:city>Gdansk</tns:city>
                 </tns:getUsersByCityRequest>
@@ -125,6 +130,26 @@ class UserEndpointIntegrationTest {
     }
 
     // ===== helpers =====
+
+    /**
+     * Owija payload pełną kopertą SOAP z nagłówkiem WS-Security UsernameToken.
+     */
+    private StringSource envelope(String payload) {
+        return new StringSource("""
+                <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                                  xmlns:wsse="%s">
+                    <soapenv:Header>
+                        <wsse:Security>
+                            <wsse:UsernameToken>
+                                <wsse:Username>admin</wsse:Username>
+                                <wsse:Password Type="%s">adminpass</wsse:Password>
+                            </wsse:UsernameToken>
+                        </wsse:Security>
+                    </soapenv:Header>
+                    <soapenv:Body>%s</soapenv:Body>
+                </soapenv:Envelope>
+                """.formatted(WSSE_NS, PW_TEXT_TYPE, payload));
+    }
 
     private String saveUser(String email, String city) {
         return userRepository.save(User.builder()

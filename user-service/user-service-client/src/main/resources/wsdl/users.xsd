@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="http://kathelan.pl/soap/users"
+           targetNamespace="http://kathelan.pl/soap/users"
+           elementFormDefault="qualified">
+
+    <!-- ===== Common types ===== -->
+
+    <xs:simpleType name="ErrorCode">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="USER_NOT_FOUND"/>
+            <xs:enumeration value="USER_ALREADY_EXISTS"/>
+            <xs:enumeration value="VALIDATION_ERROR"/>
+            <xs:enumeration value="INTERNAL_ERROR"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="Address">
+        <xs:sequence>
+            <xs:element name="street"  type="xs:string"/>
+            <xs:element name="city"    type="xs:string"/>
+            <xs:element name="zipCode" type="xs:string"/>
+            <xs:element name="country" type="xs:string"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="UserDto">
+        <xs:sequence>
+            <xs:element name="id"        type="xs:string"/>
+            <xs:element name="firstName" type="xs:string"/>
+            <xs:element name="lastName"  type="xs:string"/>
+            <xs:element name="email"     type="xs:string"/>
+            <xs:element name="address"   type="tns:Address"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- ===== getUser ===== -->
+
+    <xs:element name="getUserRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="id" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="getUserResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="user"      type="tns:UserDto" minOccurs="0"/>
+                <xs:element name="errorCode" type="tns:ErrorCode" minOccurs="0"/>
+                <xs:element name="message"   type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- ===== createUser ===== -->
+
+    <xs:element name="createUserRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="firstName" type="xs:string"/>
+                <xs:element name="lastName"  type="xs:string"/>
+                <xs:element name="email"     type="xs:string"/>
+                <xs:element name="address"   type="tns:Address"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="createUserResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="user"      type="tns:UserDto" minOccurs="0"/>
+                <xs:element name="errorCode" type="tns:ErrorCode" minOccurs="0"/>
+                <xs:element name="message"   type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- ===== getUsersByCity ===== -->
+
+    <xs:element name="getUsersByCityRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="city" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="getUsersByCityResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="users"     type="tns:UserDto" minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element name="errorCode" type="tns:ErrorCode" minOccurs="0"/>
+                <xs:element name="message"   type="xs:string" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

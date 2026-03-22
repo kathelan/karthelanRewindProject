@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Static WSDL contract for soap-service UserService.
+    Generated from users.xsd via Spring-WS DefaultWsdl11Definition.
+    Namespace : http://kathelan.pl/soap/users
+    Endpoint  : /ws
+-->
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+                  xmlns:tns="http://kathelan.pl/soap/users"
+                  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+                  name="users"
+                  targetNamespace="http://kathelan.pl/soap/users">
+
+    <wsdl:types>
+        <xs:schema>
+            <xs:import namespace="http://kathelan.pl/soap/users" schemaLocation="users.xsd"/>
+        </xs:schema>
+    </wsdl:types>
+
+    <!-- ===== Messages ===== -->
+
+    <wsdl:message name="getUserRequest">
+        <wsdl:part element="tns:getUserRequest" name="getUserRequest"/>
+    </wsdl:message>
+    <wsdl:message name="getUserResponse">
+        <wsdl:part element="tns:getUserResponse" name="getUserResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="createUserRequest">
+        <wsdl:part element="tns:createUserRequest" name="createUserRequest"/>
+    </wsdl:message>
+    <wsdl:message name="createUserResponse">
+        <wsdl:part element="tns:createUserResponse" name="createUserResponse"/>
+    </wsdl:message>
+
+    <wsdl:message name="getUsersByCityRequest">
+        <wsdl:part element="tns:getUsersByCityRequest" name="getUsersByCityRequest"/>
+    </wsdl:message>
+    <wsdl:message name="getUsersByCityResponse">
+        <wsdl:part element="tns:getUsersByCityResponse" name="getUsersByCityResponse"/>
+    </wsdl:message>
+
+    <!-- ===== PortType ===== -->
+
+    <wsdl:portType name="UsersPort">
+        <wsdl:operation name="getUser">
+            <wsdl:input message="tns:getUserRequest" name="getUserRequest"/>
+            <wsdl:output message="tns:getUserResponse" name="getUserResponse"/>
+        </wsdl:operation>
+        <wsdl:operation name="createUser">
+            <wsdl:input message="tns:createUserRequest" name="createUserRequest"/>
+            <wsdl:output message="tns:createUserResponse" name="createUserResponse"/>
+        </wsdl:operation>
+        <wsdl:operation name="getUsersByCity">
+            <wsdl:input message="tns:getUsersByCityRequest" name="getUsersByCityRequest"/>
+            <wsdl:output message="tns:getUsersByCityResponse" name="getUsersByCityResponse"/>
+        </wsdl:operation>
+    </wsdl:portType>
+
+    <!-- ===== Binding ===== -->
+
+    <wsdl:binding name="UsersPortSoap11" type="tns:UsersPort">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <wsdl:operation name="getUser">
+            <soap:operation soapAction=""/>
+            <wsdl:input name="getUserRequest"><soap:body use="literal"/></wsdl:input>
+            <wsdl:output name="getUserResponse"><soap:body use="literal"/></wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="createUser">
+            <soap:operation soapAction=""/>
+            <wsdl:input name="createUserRequest"><soap:body use="literal"/></wsdl:input>
+            <wsdl:output name="createUserResponse"><soap:body use="literal"/></wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="getUsersByCity">
+            <soap:operation soapAction=""/>
+            <wsdl:input name="getUsersByCityRequest"><soap:body use="literal"/></wsdl:input>
+            <wsdl:output name="getUsersByCityResponse"><soap:body use="literal"/></wsdl:output>
+        </wsdl:operation>
+    </wsdl:binding>
+
+    <!-- ===== Service ===== -->
+
+    <wsdl:service name="UsersPortService">
+        <wsdl:port binding="tns:UsersPortSoap11" name="UsersPortSoap11">
+            <soap:address location="http://localhost:8080/ws"/>
+        </wsdl:port>
+    </wsdl:service>
+
+</wsdl:definitions>

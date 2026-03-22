@@ -7,7 +7,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.ws.client.WebServiceFaultException;
 import org.springframework.ws.client.core.WebServiceTemplate;
+import org.springframework.ws.soap.security.wss4j2.Wss4jSecurityInterceptor;
 import pl.kathelan.soap.api.generated.Address;
 import pl.kathelan.soap.api.generated.CreateUserRequest;
 import pl.kathelan.soap.api.generated.CreateUserResponse;
@@ -16,15 +18,14 @@ import pl.kathelan.soap.api.generated.GetUserResponse;
 import pl.kathelan.soap.api.generated.GetUsersByCityResponse;
 import pl.kathelan.soap.client.UserSoapClient;
 import pl.kathelan.soap.client.UserSoapClientImpl;
-import pl.kathelan.soap.client.http.BasicAuthMessageSender;
-import pl.kathelan.soap.domain.User;
 import pl.kathelan.soap.repository.UserRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Contract test — real HTTP calls from soap-service-client to soap-service-rest.
- * No mocks. Full Spring Security stack included.
+ * No mocks. Full WS-Security stack included.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("local")
@@ -44,12 +45,20 @@ class UserSoapClientContractTest {
         marshaller.setContextPath("pl.kathelan.soap.api.generated");
         marshaller.afterPropertiesSet();
 
+        Wss4jSecurityInterceptor wsSecurityInterceptor = new Wss4jSecurityInterceptor();
+        wsSecurityInterceptor.setSecurementActions("UsernameToken");
+        wsSecurityInterceptor.setSecurementUsername("admin");
+        wsSecurityInterceptor.setSecurementPassword("adminpass");
+        wsSecurityInterceptor.setSecurementPasswordType("PasswordText");
+        wsSecurityInterceptor.afterPropertiesSet();
+
         WebServiceTemplate template = new WebServiceTemplate();
         template.setMarshaller(marshaller);
         template.setUnmarshaller(marshaller);
         template.setDefaultUri("http://localhost:" + port + "/ws");
-        template.setMessageSender(
-                new BasicAuthMessageSender("admin", "adminpass", 5000, 10000));
+        template.setInterceptors(new org.springframework.ws.client.support.interceptor.ClientInterceptor[]{
+                wsSecurityInterceptor
+        });
 
         client = new UserSoapClientImpl(template);
     }
@@ -102,7 +111,7 @@ class UserSoapClientContractTest {
     }
 
     @Test
-    void shouldRejectRequestWithoutCredentials() throws Exception {
+    void shouldRejectRequestWithoutWsSecurityHeader() throws Exception {
         Jaxb2Marshaller marshaller = new Jaxb2Marshaller();
         marshaller.setContextPath("pl.kathelan.soap.api.generated");
         marshaller.afterPropertiesSet();
@@ -114,11 +123,8 @@ class UserSoapClientContractTest {
 
         UserSoapClient unauthClient = new UserSoapClientImpl(unauthTemplate);
 
-        org.assertj.core.api.ThrowableAssert.ThrowingCallable call =
-                () -> unauthClient.getUser("any-id");
-
-        org.assertj.core.api.Assertions.assertThatThrownBy(call)
-                .isInstanceOf(org.springframework.ws.client.WebServiceIOException.class);
+        assertThatThrownBy(() -> unauthClient.getUser("any-id"))
+                .isInstanceOf(WebServiceFaultException.class);
     }
 
     // ===== helpers =====

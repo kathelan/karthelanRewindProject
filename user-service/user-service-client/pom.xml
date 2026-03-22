@@ -14,14 +14,55 @@
     <packaging>jar</packaging>
 
     <dependencies>
+        <!-- JAX-WS runtime (Jakarta) — marshalling/HTTP obsługuje automatycznie, bez WebServiceTemplate -->
         <dependency>
-            <groupId>pl.kathelan</groupId>
-            <artifactId>user-service-api</artifactId>
+            <groupId>com.sun.xml.ws</groupId>
+            <artifactId>jaxws-rt</artifactId>
+            <version>4.0.3</version>
         </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                wsimport generuje z WSDL:
+                  - UsersPort        — typowany interfejs z metodami Java
+                  - UsersPortService — fabryka portów (proxy)
+                  - request/response POJOs
+                Alternatywa dla ręcznie pisanego soap-service-client z WebServiceTemplate.
+            -->
+            <plugin>
+                <groupId>com.sun.xml.ws</groupId>
+                <artifactId>jaxws-maven-plugin</artifactId>
+                <version>4.0.3</version>
+                <executions>
+                    <execution>
+                        <id>wsimport</id>
+                        <goals>
+                            <goal>wsimport</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <wsdlDirectory>${project.basedir}/src/wsdl</wsdlDirectory>
+                    <wsdlFiles>
+                        <wsdlFile>users.wsdl</wsdlFile>
+                    </wsdlFiles>
+                    <packageName>pl.kathelan.user.client.generated</packageName>
+                    <sourceDestDir>${project.build.directory}/generated-sources/wsimport</sourceDestDir>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>
