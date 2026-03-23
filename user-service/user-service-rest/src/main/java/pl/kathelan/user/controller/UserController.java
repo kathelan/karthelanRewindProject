@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import pl.kathelan.soap.api.generated.CreateUserResponse;
@@ -48,7 +49,7 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<UserDto>> createUser(@RequestBody CreateUserRequestDto dto) {
+    public ResponseEntity<ApiResponse<UserDto>> createUser(@Valid @RequestBody CreateUserRequestDto dto) {
         log.info("REST createUser: email={}", dto.email());
         CreateUserResponse soapResponse = userSoapClient.createUser(mapper.toSoapRequest(dto));
 

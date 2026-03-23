@@ -1,8 +1,10 @@
 package pl.kathelan.user.api.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record AddressDto(
-        String street,
-        String city,
-        String zipCode,
-        String country
+        @NotBlank String street,
+        @NotBlank String city,
+        @NotBlank String zipCode,
+        @NotBlank String country
 ) {}

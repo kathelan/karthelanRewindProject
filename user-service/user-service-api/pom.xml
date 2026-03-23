@@ -13,4 +13,11 @@
     <artifactId>user-service-api</artifactId>
     <packaging>jar</packaging>
 
+    <dependencies>
+        <dependency>
+            <groupId>pl.kathelan</groupId>
+            <artifactId>core-common</artifactId>
+        </dependency>
+    </dependencies>
+
 </project>
