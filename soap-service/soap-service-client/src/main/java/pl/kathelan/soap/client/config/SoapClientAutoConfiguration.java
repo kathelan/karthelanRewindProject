@@ -10,6 +10,7 @@ import org.springframework.ws.soap.security.wss4j2.Wss4jSecurityInterceptor;
 import org.springframework.ws.transport.http.HttpUrlConnectionMessageSender;
 import pl.kathelan.soap.client.UserSoapClient;
 import pl.kathelan.soap.client.UserSoapClientImpl;
+import pl.kathelan.soap.client.interceptor.SoapLoggingClientInterceptor;
 
 import java.time.Duration;
 
@@ -43,7 +44,8 @@ public class SoapClientAutoConfiguration {
         template.setUnmarshaller(soapClientMarshaller);
         template.setDefaultUri(properties.getUrl());
         template.setMessageSender(sender);
-        template.setInterceptors(new ClientInterceptor[]{wsSecurityInterceptor});
+        // Kolejność: security dodaje nagłówek WS-Security → logging widzi pełną kopertę (z hasłem zamaskowanym)
+        template.setInterceptors(new ClientInterceptor[]{wsSecurityInterceptor, new SoapLoggingClientInterceptor()});
         return template;
     }
 

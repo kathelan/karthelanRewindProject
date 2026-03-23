@@ -12,3 +12,7 @@ soap:
     users:
       admin: adminpass
       user: userpass
+
+logging:
+  level:
+    pl.kathelan.soap.interceptor: DEBUG

@@ -15,6 +15,7 @@ import org.springframework.ws.transport.http.MessageDispatcherServlet;
 import org.springframework.ws.wsdl.wsdl11.DefaultWsdl11Definition;
 import org.springframework.xml.xsd.SimpleXsdSchema;
 import org.springframework.xml.xsd.XsdSchema;
+import pl.kathelan.soap.interceptor.SoapLoggingInterceptor;
 
 import java.util.List;
 
@@ -24,10 +25,12 @@ import java.util.List;
 public class WebServiceConfig extends WsConfigurerAdapter {
 
     private final Wss4jSecurityInterceptor wsSecurityInterceptor;
+    private final SoapLoggingInterceptor soapLoggingInterceptor;
 
     @Override
     public void addInterceptors(List<EndpointInterceptor> interceptors) {
-        // Kolejność ma znaczenie: najpierw auth, potem walidacja
+        // Kolejność: logging (widzi surową kopertę z hasłem) → auth → walidacja XSD
+        interceptors.add(soapLoggingInterceptor);
         interceptors.add(wsSecurityInterceptor);
         interceptors.add(payloadValidatingInterceptor());
     }
