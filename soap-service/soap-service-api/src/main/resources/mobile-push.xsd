@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:tns="http://kathelan.pl/soap/push"
+           targetNamespace="http://kathelan.pl/soap/push"
+           elementFormDefault="qualified">
+
+    <!-- ===== Restricted simple types ===== -->
+
+    <xs:simpleType name="NonEmptyString">
+        <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- ===== Enums ===== -->
+
+    <xs:simpleType name="AuthMethod">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="PUSH"/>
+            <xs:enumeration value="SMS"/>
+            <xs:enumeration value="BIOMETRIC"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="SendStatus">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="SENT"/>
+            <xs:enumeration value="FAILED"/>
+            <xs:enumeration value="NO_DEVICE"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="PushStatus">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="PENDING"/>
+            <xs:enumeration value="APPROVED"/>
+            <xs:enumeration value="REJECTED"/>
+            <xs:enumeration value="EXPIRED"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="ErrorCode">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="USER_NOT_FOUND"/>
+            <xs:enumeration value="USER_INACTIVE"/>
+            <xs:enumeration value="DELIVERY_NOT_FOUND"/>
+            <xs:enumeration value="INTERNAL_ERROR"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- ===== getUserCapabilities ===== -->
+
+    <xs:element name="getUserCapabilitiesRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="userId" type="tns:NonEmptyString"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="getUserCapabilitiesResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="userId"      type="tns:NonEmptyString" minOccurs="0"/>
+                <xs:element name="active"      type="xs:boolean"         minOccurs="0"/>
+                <xs:element name="authMethods" type="tns:AuthMethod"     minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element name="errorCode"   type="tns:ErrorCode"      minOccurs="0"/>
+                <xs:element name="message"     type="xs:string"          minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- ===== sendPush ===== -->
+
+    <xs:element name="sendPushRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="userId"    type="tns:NonEmptyString"/>
+                <xs:element name="processId" type="tns:NonEmptyString"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="sendPushResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="deliveryId" type="tns:NonEmptyString" minOccurs="0"/>
+                <xs:element name="sendStatus" type="tns:SendStatus"     minOccurs="0"/>
+                <xs:element name="errorCode"  type="tns:ErrorCode"      minOccurs="0"/>
+                <xs:element name="message"    type="xs:string"          minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- ===== getPushStatus ===== -->
+
+    <xs:element name="getPushStatusRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="deliveryId" type="tns:NonEmptyString"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="getPushStatusResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="deliveryId" type="tns:NonEmptyString" minOccurs="0"/>
+                <xs:element name="pushStatus" type="tns:PushStatus"     minOccurs="0"/>
+                <xs:element name="errorCode"  type="tns:ErrorCode"      minOccurs="0"/>
+                <xs:element name="message"    type="xs:string"          minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>

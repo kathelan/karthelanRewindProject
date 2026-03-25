@@ -38,7 +38,7 @@ public class WebServiceConfig extends WsConfigurerAdapter {
     @Bean
     public PayloadValidatingInterceptor payloadValidatingInterceptor() {
         PayloadValidatingInterceptor interceptor = new PayloadValidatingInterceptor();
-        interceptor.setSchema(new ClassPathResource("users.xsd"));
+        interceptor.setSchemas(new ClassPathResource("users.xsd"), new ClassPathResource("mobile-push.xsd"));
         interceptor.setValidateRequest(true);
         interceptor.setValidateResponse(false);
         return interceptor;
@@ -65,5 +65,20 @@ public class WebServiceConfig extends WsConfigurerAdapter {
     @Bean
     public XsdSchema usersSchema() {
         return new SimpleXsdSchema(new ClassPathResource("users.xsd"));
+    }
+
+    @Bean(name = "mobilePush")
+    public DefaultWsdl11Definition mobilePushWsdl11Definition(XsdSchema mobilePushSchema) {
+        DefaultWsdl11Definition definition = new DefaultWsdl11Definition();
+        definition.setPortTypeName("MobilePushPort");
+        definition.setLocationUri("/ws");
+        definition.setTargetNamespace("http://kathelan.pl/soap/push");
+        definition.setSchema(mobilePushSchema);
+        return definition;
+    }
+
+    @Bean
+    public XsdSchema mobilePushSchema() {
+        return new SimpleXsdSchema(new ClassPathResource("mobile-push.xsd"));
     }
 }
