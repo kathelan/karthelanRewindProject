@@ -20,6 +20,7 @@
         <module>core-common</module>
         <module>soap-service</module>
         <module>user-service</module>
+        <module>auth-service</module>
     </modules>
 
     <properties>
@@ -88,6 +89,11 @@
                 <artifactId>user-service-client</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>pl.kathelan</groupId>
+                <artifactId>auth-service-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -96,6 +102,15 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import pl.kathelan.common.resilience.exception.CircuitOpenException;
-import pl.kathelan.user.api.dto.ApiResponse;
+import pl.kathelan.common.api.ApiResponse;
 
 import java.util.stream.Collectors;
 

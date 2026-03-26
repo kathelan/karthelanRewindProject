@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import pl.kathelan.common.resilience.ResilientCaller;
 import pl.kathelan.common.resilience.circuitbreaker.CircuitBreakerConfig;
 import pl.kathelan.common.resilience.circuitbreaker.CountBasedCircuitBreaker;
 import pl.kathelan.common.resilience.circuitbreaker.InMemoryCircuitBreakerStateRepository;
@@ -60,7 +61,7 @@ class UserServiceImplTest {
         RetryConfig retryConfig = new RetryConfig(2, Duration.ZERO, 1.0, Set.of(RuntimeException.class));
         RetryExecutor retryExecutor = new RetryExecutor();
 
-        service = new UserServiceImpl(soapClient, mapper, cb, retryExecutor, retryConfig);
+        service = new UserServiceImpl(soapClient, mapper, new ResilientCaller(cb, retryExecutor, retryConfig));
     }
 
     // ===== getUser =====
@@ -167,8 +168,8 @@ class UserServiceImplTest {
     void shouldOpenCircuitBreaker_afterInfrastructureFailures() {
         when(soapClient.getUser(any())).thenThrow(new RuntimeException("connection refused"));
 
-        // threshold=3, retry=2 → każde wywołanie do serwisu to 2 próby
-        // potrzeba 2 wywołań serwisu (2x2=4 prób SOAP) żeby CB się otworzył po 3 failure
+        // CB(Retry): CB liczy 1 failure dopiero gdy Retry wyczerpie próby.
+        // threshold=3, retry=2 → potrzeba 3 wywołań serwisu (każde wyczerpuje retry) żeby CB się otworzył.
         for (int i = 0; i < 5; i++) {
             try { service.getUser("x"); } catch (Exception ignored) {}
         }

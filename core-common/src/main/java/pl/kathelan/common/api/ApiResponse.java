@@ -1,4 +1,4 @@
-package pl.kathelan.user.api.dto;
+package pl.kathelan.common.api;
 
 public record ApiResponse<T>(
         T data,

@@ -1,4 +1,4 @@
-# Auth Process Design
+j# Auth Process Design
 
 ## Aktorzy
 
@@ -142,19 +142,92 @@ Client                   auth-service              MobilePushService (SOAP)
 
 ## Decyzje architektoniczne
 
-### Dlaczego polling zamiast callback
+---
 
-Callback wymaga żeby MobilePushService wiedział **komu oddzwonić** — przy wielu
-integrujących się aplikacjach wymaga rejestracji `clientId → callbackUrl`.
-Polling po stronie auth-service eliminuje ten problem:
-- auth-service sam odpytuje o status swoich procesów
-- MobilePushService nie musi znać adresów konsumentów
-- Prościej, bezpieczniej, brak ryzyka SSRF
+### Decyzja 1: Kto odpytuje zewnętrzny serwis — client vs backend
 
-### Dlaczego brak endpointu /complete po stronie klienta
+#### Wariant A: Client polluje MobilePushService bezpośrednio
 
-Stan procesu zmienia wyłącznie auth-service na podstawie odpowiedzi
-MobilePushService. Klient nie może sfabrykować zatwierdzenia.
+```
+Client → GET MobilePushService/push/{deliveryId}/status
+Client → POST auth-service/process/{id}/complete   (gdy APPROVED)
+```
+
+**Plusy:**
+- Prostszy backend — auth-service nie musi mieć schedulera
+- Mniej ruchu na backend
+
+**Minusy:**
+- Client zna wewnętrzny adres MobilePushService — **wyciek topologii**
+- Client musi znać protokół zewnętrznej usługi (SOAP) — **tight coupling**
+- Każdy client musi implementować logikę pollowania i obsługi błędów
+- Rotacja lub zmiana URL MobilePushService wymaga zmiany każdego klienta
+- Brak jednego miejsca do monitorowania stanu procesów
+- **Nie skaluje przy wielu typach klientów** (web, mobile, API)
+
+#### Wariant B: Backend polluje MobilePushService (nasza decyzja)
+
+```
+Client → GET auth-service/process/{id}/status   (polling co 3s)
+auth-service scheduler → GET MobilePushService/push/{deliveryId}/status
+```
+
+**Plusy:**
+- Client nie wie nic o MobilePushService — **czysta separacja**
+- Zmiana zewnętrznej usługi (SOAP → REST, inny URL) — tylko auth-service
+- Jeden punkt monitoringu, circuit breaker, retry dla całej komunikacji z zewnątrz
+- Client API pozostaje stabilne niezależnie od zmian zewnętrznych integracji
+- Łatwiejsze testowanie — client testuje tylko auth-service API
+
+**Minusy:**
+- Scheduler w backend — dodatkowa złożoność
+- Większy ruch: client polluje auth-service, auth-service polluje MobilePushService
+
+**Dlaczego B:** Zewnętrzne serwisy to detal implementacyjny backendu. Client nie powinien znać ani adresów ani protokołów zewnętrznych zależności. Każda warstwa powinna znać tylko swojego bezpośredniego sąsiada.
+
+---
+
+### Decyzja 2: Kto wywołuje /complete — client vs zewnętrzna usługa
+
+#### Wariant A: Client wywołuje /complete (stosowane w wielu produkcyjnych systemach)
+
+```
+Client polluje GET /status
+Client widzi APPROVED (skąd? patrz Decyzja 1)
+Client → POST /process/{id}/complete
+```
+
+**Plusy:**
+- Prostszy backend — brak schedulera
+- Explicit flow — client świadomie kończy proces
+- Stosowane w praktyce (np. w bankowości mobilnej gdzie app jest zaufana)
+
+**Minusy:**
+- **Skąd client wie że naprawdę user zatwierdził na telefonie?** Nie wie — ufa sobie
+- Podatność na **IDOR** — ktoś z processId może wywołać complete za innego usera
+- Wymaga dodatkowego zabezpieczenia: completionToken + ownership check
+- Client może wywołać complete zanim push dotrze — false positive
+- **Zaufanie pochodzi od klienta, nie od zewnętrznego systemu**
+
+#### Wariant B: Backend zmienia stan automatycznie po potwierdzeniu z zewnątrz (nasza decyzja)
+
+```
+auth-service scheduler → widzi APPROVED w MobilePushService
+auth-service → zmienia stan procesu na APPROVED
+Client polluje GET /status → widzi APPROVED
+```
+
+**Plusy:**
+- **Zaufanie pochodzi od zewnętrznej usługi** — jedynego wiarygodnego źródła prawdy
+- Client nie może sfabrykować zatwierdzenia
+- Brak endpointu /complete = brak wektora ataku
+- Prostsze API klienta — tylko init, status, cancel
+
+**Minusy:**
+- Opóźnienie = interwał schedulera (np. 3s) zamiast natychmiastowego complete
+- Scheduler musi działać niezawodnie
+
+**Dlaczego B:** W systemie push-based zaufanie musi pochodzić od urządzenia mobilnego przez zewnętrzny provider, nie od klienta który może być skompromitowany lub działać złośliwie. Backend jako jedyny pośrednik gwarantuje że stan procesu odzwierciedla rzeczywistą akcję użytkownika na telefonie.
 
 ### Concurrency — CLOSED
 

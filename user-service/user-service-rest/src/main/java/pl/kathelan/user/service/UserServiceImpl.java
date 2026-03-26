@@ -2,9 +2,7 @@ package pl.kathelan.user.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import pl.kathelan.common.resilience.circuitbreaker.CircuitBreaker;
-import pl.kathelan.common.resilience.retry.RetryConfig;
-import pl.kathelan.common.resilience.retry.RetryExecutor;
+import pl.kathelan.common.resilience.ResilientCaller;
 import pl.kathelan.soap.api.generated.CreateUserResponse;
 import pl.kathelan.soap.api.generated.ErrorCode;
 import pl.kathelan.soap.api.generated.GetUserResponse;
@@ -25,17 +23,12 @@ public class UserServiceImpl implements UserService {
 
     private final UserSoapClient soapClient;
     private final UserRestMapper mapper;
-    private final CircuitBreaker circuitBreaker;
-    private final RetryExecutor retryExecutor;
-    private final RetryConfig retryConfig;
+    private final ResilientCaller resilientCaller;
 
     @Override
     public UserDto getUser(String id) {
         log.info("getUser: id={}", id);
-        GetUserResponse response = retryExecutor.execute(
-                () -> circuitBreaker.execute(() -> soapClient.getUser(id)),
-                retryConfig
-        );
+        GetUserResponse response = resilientCaller.call(() -> soapClient.getUser(id));
         if (response.getUser() == null) {
             if (response.getErrorCode() == ErrorCode.USER_NOT_FOUND) {
                 throw new UserNotFoundException(id);
@@ -48,10 +41,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto createUser(CreateUserRequestDto dto) {
         log.info("createUser: email={}", dto.email());
-        CreateUserResponse response = retryExecutor.execute(
-                () -> circuitBreaker.execute(() -> soapClient.createUser(mapper.toSoapRequest(dto))),
-                retryConfig
-        );
+        CreateUserResponse response = resilientCaller.call(() -> soapClient.createUser(mapper.toSoapRequest(dto)));
         if (response.getUser() == null) {
             if (response.getErrorCode() == ErrorCode.USER_ALREADY_EXISTS) {
                 throw new UserAlreadyExistsException(dto.email());
@@ -64,10 +54,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<UserDto> getUsersByCity(String city) {
         log.info("getUsersByCity: city={}", city);
-        GetUsersByCityResponse response = retryExecutor.execute(
-                () -> circuitBreaker.execute(() -> soapClient.getUsersByCity(city)),
-                retryConfig
-        );
+        GetUsersByCityResponse response = resilientCaller.call(() -> soapClient.getUsersByCity(city));
         return response.getUsers().stream().map(mapper::toDto).toList();
     }
 }

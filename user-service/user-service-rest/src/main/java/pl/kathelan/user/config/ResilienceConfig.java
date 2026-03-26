@@ -2,6 +2,7 @@ package pl.kathelan.user.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import pl.kathelan.common.resilience.ResilientCaller;
 import pl.kathelan.common.resilience.circuitbreaker.CircuitBreaker;
 import pl.kathelan.common.resilience.circuitbreaker.CircuitBreakerConfig;
 import pl.kathelan.common.resilience.circuitbreaker.CircuitBreakerRegistry;
@@ -48,11 +49,16 @@ public class ResilienceConfig {
     }
 
     @Bean
+    public ResilientCaller soapServiceResilientCaller(CircuitBreaker soapServiceCircuitBreaker,
+                                                      RetryExecutor retryExecutor,
+                                                      RetryConfig soapServiceRetryConfig) {
+        return new ResilientCaller(soapServiceCircuitBreaker, retryExecutor, soapServiceRetryConfig);
+    }
+
+    @Bean
     public UserService userService(UserSoapClient soapClient,
                                    UserRestMapper mapper,
-                                   CircuitBreaker soapServiceCircuitBreaker,
-                                   RetryExecutor retryExecutor,
-                                   RetryConfig soapServiceRetryConfig) {
-        return new UserServiceImpl(soapClient, mapper, soapServiceCircuitBreaker, retryExecutor, soapServiceRetryConfig);
+                                   ResilientCaller soapServiceResilientCaller) {
+        return new UserServiceImpl(soapClient, mapper, soapServiceResilientCaller);
     }
 }
