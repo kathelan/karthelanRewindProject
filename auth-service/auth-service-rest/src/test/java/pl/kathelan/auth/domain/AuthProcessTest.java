@@ -87,7 +87,7 @@ class AuthProcessTest {
     @Test
     void withDeliveryIdPreservesState() {
         AuthProcess process = AuthProcess.create("user1", AuthMethod.PUSH)
-                .withDeliveryId("delivery-123");
+                .withDeliveryId("delivery-123", null);
         assertThat(process.deliveryId()).isEqualTo("delivery-123");
         assertThat(process.processState()).isEqualTo(ProcessState.PENDING);
     }

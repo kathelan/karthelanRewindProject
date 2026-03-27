@@ -86,6 +86,7 @@
             <xs:sequence>
                 <xs:element name="deliveryId" type="tns:NonEmptyString" minOccurs="0"/>
                 <xs:element name="sendStatus" type="tns:SendStatus"     minOccurs="0"/>
+                <xs:element name="expiresAt"  type="xs:dateTime"        minOccurs="0"/>
                 <xs:element name="errorCode"  type="tns:ErrorCode"      minOccurs="0"/>
                 <xs:element name="message"    type="xs:string"          minOccurs="0"/>
             </xs:sequence>

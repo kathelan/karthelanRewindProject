@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import pl.kathelan.auth.api.dto.AuthMethod;
 import pl.kathelan.auth.domain.AuthProcess;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -69,29 +68,19 @@ class InMemoryAuthProcessRepositoryTest {
     }
 
     @Test
-    void findPendingOlderThanReturnsOldPendingProcesses() {
-        AuthProcess process = AuthProcess.create("user1", AuthMethod.PUSH);
-        repository.save(process);
+    void findAllPendingReturnsPendingProcesses() {
+        repository.save(AuthProcess.create("user1", AuthMethod.PUSH));
+        repository.save(AuthProcess.create("user2", AuthMethod.PUSH));
 
-        List<AuthProcess> old = repository.findPendingOlderThan(LocalDateTime.now().plusSeconds(1));
-        assertThat(old).hasSize(1);
+        List<AuthProcess> pending = repository.findAllPending();
+        assertThat(pending).hasSize(2);
     }
 
     @Test
-    void findPendingOlderThanIgnoresRecentProcesses() {
-        AuthProcess process = AuthProcess.create("user1", AuthMethod.PUSH);
-        repository.save(process);
-
-        List<AuthProcess> old = repository.findPendingOlderThan(LocalDateTime.now().minusSeconds(10));
-        assertThat(old).isEmpty();
-    }
-
-    @Test
-    void findPendingOlderThanIgnoresTerminalProcesses() {
+    void findAllPendingIgnoresTerminalProcesses() {
         AuthProcess process = AuthProcess.create("user1", AuthMethod.PUSH);
         repository.save(process.expire());
 
-        List<AuthProcess> old = repository.findPendingOlderThan(LocalDateTime.now().plusSeconds(1));
-        assertThat(old).isEmpty();
+        assertThat(repository.findAllPending()).isEmpty();
     }
 }

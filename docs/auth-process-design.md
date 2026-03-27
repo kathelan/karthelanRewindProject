@@ -1,4 +1,4 @@
-j# Auth Process Design
+# Auth Process Design
 
 ## Aktorzy
 

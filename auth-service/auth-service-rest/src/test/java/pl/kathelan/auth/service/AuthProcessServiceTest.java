@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import pl.kathelan.auth.api.dto.AuthMethod;
 import pl.kathelan.common.resilience.ResilientCaller;
 import pl.kathelan.common.resilience.circuitbreaker.CircuitBreakerConfig;
@@ -26,7 +27,13 @@ import pl.kathelan.soap.push.generated.GetUserCapabilitiesResponse;
 import pl.kathelan.soap.push.generated.SendPushResponse;
 import pl.kathelan.soap.push.generated.SendStatus;
 
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.XMLGregorianCalendar;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -42,6 +49,9 @@ class AuthProcessServiceTest {
     @Mock
     private MobilePushClient mobilePushClient;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private AuthProcessServiceImpl service;
 
     @BeforeEach
@@ -53,7 +63,7 @@ class AuthProcessServiceTest {
         ResilientCaller resilientCaller = new ResilientCaller(
                 cb, new RetryExecutor(), new RetryConfig(2, Duration.ZERO, 1.0, Set.of(RuntimeException.class))
         );
-        service = new AuthProcessServiceImpl(new InMemoryAuthProcessRepository(), mobilePushClient, resilientCaller);
+        service = new AuthProcessServiceImpl(new InMemoryAuthProcessRepository(), mobilePushClient, resilientCaller, eventPublisher);
     }
 
     // --- getCapabilities ---
@@ -160,6 +170,16 @@ class AuthProcessServiceTest {
         SendPushResponse response = new SendPushResponse();
         response.setDeliveryId(deliveryId);
         response.setSendStatus(SendStatus.SENT);
+        response.setExpiresAt(toXmlDateTime(LocalDateTime.now().plusMinutes(2)));
         when(mobilePushClient.sendPush(anyString(), anyString())).thenReturn(response);
+    }
+
+    private static XMLGregorianCalendar toXmlDateTime(LocalDateTime dt) {
+        try {
+            GregorianCalendar gc = GregorianCalendar.from(dt.atZone(ZoneId.systemDefault()));
+            return DatatypeFactory.newInstance().newXMLGregorianCalendar(gc);
+        } catch (DatatypeConfigurationException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

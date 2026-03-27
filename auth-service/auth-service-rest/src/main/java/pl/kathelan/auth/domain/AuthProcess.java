@@ -20,11 +20,12 @@ public record AuthProcess(
         String deliveryId,
         AuthProcessState state,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        LocalDateTime expiresAt
 ) {
     public static AuthProcess create(String userId, AuthMethod authMethod) {
         LocalDateTime now = LocalDateTime.now();
-        return new AuthProcess(UUID.randomUUID(), userId, authMethod, null, new PendingState(), now, now);
+        return new AuthProcess(UUID.randomUUID(), userId, authMethod, null, new PendingState(), now, now, null);
     }
 
     public ProcessState processState() {
@@ -55,12 +56,12 @@ public record AuthProcess(
         return transition(new ClosedState());
     }
 
-    public AuthProcess withDeliveryId(String deliveryId) {
-        return new AuthProcess(id, userId, authMethod, deliveryId, state, createdAt, updatedAt);
+    public AuthProcess withDeliveryId(String deliveryId, LocalDateTime expiresAt) {
+        return new AuthProcess(id, userId, authMethod, deliveryId, state, createdAt, updatedAt, expiresAt);
     }
 
     private AuthProcess transition(AuthProcessState newState) {
         state.validateTransition(newState.processState());
-        return new AuthProcess(id, userId, authMethod, deliveryId, newState, createdAt, LocalDateTime.now());
+        return new AuthProcess(id, userId, authMethod, deliveryId, newState, createdAt, LocalDateTime.now(), expiresAt);
     }
 }

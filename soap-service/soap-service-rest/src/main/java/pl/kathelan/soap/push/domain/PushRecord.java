@@ -15,4 +15,5 @@ public class PushRecord {
     String processId;
     PushStatus status;
     LocalDateTime createdAt;
+    LocalDateTime expiresAt;
 }

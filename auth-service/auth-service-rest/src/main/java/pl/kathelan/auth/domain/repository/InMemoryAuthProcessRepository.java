@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 import pl.kathelan.auth.api.dto.ProcessState;
 import pl.kathelan.auth.domain.AuthProcess;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -36,9 +35,9 @@ public class InMemoryAuthProcessRepository implements AuthProcessRepository {
     }
 
     @Override
-    public List<AuthProcess> findPendingOlderThan(LocalDateTime threshold) {
+    public List<AuthProcess> findAllPending() {
         return store.values().stream()
-                .filter(p -> p.processState() == ProcessState.PENDING && p.createdAt().isBefore(threshold))
+                .filter(p -> p.processState() == ProcessState.PENDING)
                 .toList();
     }
 }
