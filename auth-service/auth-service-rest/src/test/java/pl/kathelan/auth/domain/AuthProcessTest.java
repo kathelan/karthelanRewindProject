@@ -7,7 +7,6 @@ import pl.kathelan.auth.api.dto.AuthMethod;
 import pl.kathelan.auth.api.dto.ProcessState;
 import pl.kathelan.auth.api.exception.InvalidStateTransitionException;
 
-import java.time.LocalDateTime;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 
@@ -85,9 +84,9 @@ class AuthProcessTest {
     }
 
     @Test
-    void withDeliveryIdPreservesState() {
+    void assignDeliveryPreservesState() {
         AuthProcess process = AuthProcess.create("user1", AuthMethod.PUSH)
-                .withDeliveryId("delivery-123", null);
+                .assignDelivery("delivery-123", null);
         assertThat(process.deliveryId()).isEqualTo("delivery-123");
         assertThat(process.processState()).isEqualTo(ProcessState.PENDING);
     }

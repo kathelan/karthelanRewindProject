@@ -3,6 +3,7 @@ package pl.kathelan.auth.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import pl.kathelan.auth.api.dto.AuthMethod;
 import pl.kathelan.auth.api.dto.CapabilitiesResponse;
 import pl.kathelan.auth.api.dto.InitProcessRequest;
 import pl.kathelan.auth.api.dto.InitProcessResponse;
@@ -11,13 +12,14 @@ import pl.kathelan.auth.api.exception.AuthProcessNotFoundException;
 import pl.kathelan.auth.domain.AuthProcess;
 import pl.kathelan.auth.domain.repository.AuthProcessRepository;
 import pl.kathelan.auth.event.AuthProcessStateChangedEvent;
+import pl.kathelan.auth.mapper.AuthProcessMapper;
 import pl.kathelan.common.resilience.ResilientCaller;
+import pl.kathelan.common.util.XmlDateTimeUtils;
 import pl.kathelan.soap.client.MobilePushClient;
 import pl.kathelan.soap.push.generated.GetPushStatusResponse;
 import pl.kathelan.soap.push.generated.GetUserCapabilitiesResponse;
 import pl.kathelan.soap.push.generated.SendPushResponse;
 
-import javax.xml.datatype.XMLGregorianCalendar;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -31,12 +33,18 @@ public class AuthProcessServiceImpl implements AuthProcessService, AuthProcessSc
     private final ResilientCaller resilientCaller;
     private final ApplicationEventPublisher eventPublisher;
 
+    // Per-user lock: prevents two simultaneous initProcess for the same userId
+    // from both finding no pending process and creating two concurrent PENDING entries.
+    // Note: at JPA layer this will be replaced by optimistic locking + unique constraint.
+    private final java.util.concurrent.ConcurrentHashMap<String, Object> userInitLocks =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     @Override
     public CapabilitiesResponse getCapabilities(String userId) {
         log.info("getCapabilities: userId={}", userId);
         GetUserCapabilitiesResponse soap = resilientCaller.call(() -> mobilePushClient.getUserCapabilities(userId));
-        List<pl.kathelan.auth.api.dto.AuthMethod> methods = soap.getAuthMethods().stream()
-                .map(m -> pl.kathelan.auth.api.dto.AuthMethod.valueOf(m.name()))
+        List<AuthMethod> methods = soap.getAuthMethods().stream()
+                .map(m -> AuthMethod.valueOf(m.name()))
                 .toList();
         return new CapabilitiesResponse(soap.getUserId(), soap.isActive(), methods);
     }
@@ -44,33 +52,32 @@ public class AuthProcessServiceImpl implements AuthProcessService, AuthProcessSc
     @Override
     public InitProcessResponse initProcess(InitProcessRequest request) {
         log.info("initProcess: userId={}, method={}", request.userId(), request.preferredMethod());
-        repository.findPendingByUserId(request.userId())
-                .map(AuthProcess::close)
-                .ifPresent(repository::save);
+        Object lock = userInitLocks.computeIfAbsent(request.userId(), k -> new Object());
+        synchronized (lock) {
+            repository.findPendingByUserId(request.userId())
+                    .map(AuthProcess::close)
+                    .ifPresent(this::saveAndPublish);
 
-        AuthProcess created = AuthProcess.create(request.userId(), request.preferredMethod());
-        SendPushResponse soap = resilientCaller.call(
-                () -> mobilePushClient.sendPush(request.userId(), created.id().toString())
-        );
-        LocalDateTime expiresAt = fromXmlDateTime(soap.getExpiresAt());
-        AuthProcess process = created.withDeliveryId(soap.getDeliveryId(), expiresAt);
+            AuthProcess created = AuthProcess.create(request.userId(), request.preferredMethod());
+            SendPushResponse soap = resilientCaller.call(
+                    () -> mobilePushClient.sendPush(request.userId(), created.id().toString())
+            );
+            LocalDateTime expiresAt = XmlDateTimeUtils.toLocalDateTime(soap.getExpiresAt());
+            AuthProcess process = created.assignDelivery(soap.getDeliveryId(), expiresAt);
 
-        repository.save(process);
-        return new InitProcessResponse(process.id().toString());
+            repository.save(process);
+            return new InitProcessResponse(process.id().toString(), expiresAt);
+        }
     }
 
     @Override
     public ProcessStatusResponse getStatus(UUID processId) {
-        AuthProcess process = findOrThrow(processId);
-        return toResponse(process);
+        return AuthProcessMapper.toResponse(findOrThrow(processId));
     }
 
     @Override
     public void cancel(UUID processId) {
-        AuthProcess process = findOrThrow(processId);
-        AuthProcess cancelled = process.cancel();
-        repository.save(cancelled);
-        eventPublisher.publishEvent(new AuthProcessStateChangedEvent(cancelled.id(), cancelled.userId(), cancelled.processState()));
+        saveAndPublish(findOrThrow(processId).cancel());
     }
 
     @Override
@@ -99,19 +106,10 @@ public class AuthProcessServiceImpl implements AuthProcessService, AuthProcessSc
                 .orElseThrow(() -> new AuthProcessNotFoundException(id));
     }
 
-    private ProcessStatusResponse toResponse(AuthProcess p) {
-        return new ProcessStatusResponse(
-                p.id().toString(),
-                p.userId(),
-                p.processState(),
-                p.authMethod(),
-                p.createdAt(),
-                p.updatedAt()
-        );
+    @Override
+    public void expireOverdueProcesses() {
+        repository.findPendingExpiredBefore(LocalDateTime.now())
+                .forEach(process -> saveAndPublish(process.expire()));
     }
 
-    private static LocalDateTime fromXmlDateTime(XMLGregorianCalendar xgc) {
-        if (xgc == null) return null;
-        return xgc.toGregorianCalendar().toZonedDateTime().toLocalDateTime();
-    }
 }

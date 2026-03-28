@@ -13,7 +13,10 @@ import pl.kathelan.soap.push.generated.GetPushStatusResponse;
 import pl.kathelan.soap.push.generated.GetUserCapabilitiesResponse;
 import pl.kathelan.soap.push.generated.SendPushResponse;
 
+import pl.kathelan.soap.client.exception.SoapClientException;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.ws.test.client.RequestMatchers.payload;
 import static org.springframework.ws.test.client.ResponseCreators.withPayload;
 
@@ -80,11 +83,9 @@ class MobilePushClientTest {
                         </tns:getUserCapabilitiesResponse>
                         """.formatted(NS))));
 
-        GetUserCapabilitiesResponse response = client.getUserCapabilities("unknown");
-
-        assertThat(response.getUserId()).isNull();
-        assertThat(response.getErrorCode()).isNotNull();
-        assertThat(response.getErrorCode().value()).isEqualTo("USER_NOT_FOUND");
+        assertThatThrownBy(() -> client.getUserCapabilities("unknown"))
+                .isInstanceOf(SoapClientException.class)
+                .hasMessageContaining("USER_NOT_FOUND");
         mockServer.verify();
     }
 
@@ -128,10 +129,9 @@ class MobilePushClientTest {
                         </tns:sendPushResponse>
                         """.formatted(NS))));
 
-        SendPushResponse response = client.sendPush("user-inactive", "proc-xyz");
-
-        assertThat(response.getDeliveryId()).isNull();
-        assertThat(response.getErrorCode().value()).isEqualTo("USER_INACTIVE");
+        assertThatThrownBy(() -> client.sendPush("user-inactive", "proc-xyz"))
+                .isInstanceOf(SoapClientException.class)
+                .hasMessageContaining("USER_INACTIVE");
         mockServer.verify();
     }
 
@@ -173,10 +173,9 @@ class MobilePushClientTest {
                         </tns:getPushStatusResponse>
                         """.formatted(NS))));
 
-        GetPushStatusResponse response = client.getPushStatus("ghost");
-
-        assertThat(response.getDeliveryId()).isNull();
-        assertThat(response.getErrorCode().value()).isEqualTo("DELIVERY_NOT_FOUND");
+        assertThatThrownBy(() -> client.getPushStatus("ghost"))
+                .isInstanceOf(SoapClientException.class)
+                .hasMessageContaining("DELIVERY_NOT_FOUND");
         mockServer.verify();
     }
 }

@@ -1,0 +1,7 @@
+{
+  "data": {
+    "userId": "user1",
+    "active": true,
+    "authMethods": ["PUSH"]
+  }
+}

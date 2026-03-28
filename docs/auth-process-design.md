@@ -44,7 +44,7 @@
 ```
 GET    /auth/capabilities/{userId}   — sprawdź dostępne metody auth usera
 POST   /process/init                 — zainicjuj proces, zwraca processId
-GET    /process/{id}/status          — sprawdź stan procesu (client polluje)
+GET    /process/{id}/stream          — SSE stream zmian stanu procesu
 DELETE /process/{id}/cancel          — anuluj proces
 ```
 
@@ -70,18 +70,18 @@ Client                   auth-service              MobilePushService (SOAP)
   │                           │  state: PENDING              │
   │◀─ {processId} ───────────│                              │
   │                           │                              │
-  │── GET /status ───────────▶│                              │
-  │◀─ {PENDING} ─────────────│                              │
+  │── GET /stream ───────────▶│  (SSE — otwiera connection)  │
+  │◀─ event: PENDING ─────────│                              │
   │                           │                              │
-  │  (polling co 3s)          │  scheduler co 3s             │
+  │                           │  scheduler co 3s             │
   │                           │── GET /push/{delivId}/status▶│
   │                           │◀─ {APPROVED} ───────────────│
   │                           │  state: APPROVED             │
   │                           │  Spring Event → audit log    │
-  │                           │  Spring Event → expiry token │
+  │                           │  Spring Event → SSE push     │
   │                           │                              │
-  │── GET /status ───────────▶│                              │
-  │◀─ {APPROVED} ────────────│                              │
+  │◀─ event: APPROVED ────────│  (server pushuje, bez pollingu)
+  │  (zamyka connection)       │                              │
 ```
 
 ### Cancel Flow
@@ -100,13 +100,17 @@ Client                   auth-service              MobilePushService (SOAP)
 ```
 Client                   auth-service              MobilePushService (SOAP)
   │                           │                              │
+  │── GET /stream ───────────▶│  (SSE — otwiera connection)  │
+  │◀─ event: PENDING ─────────│                              │
+  │                           │                              │
   │                           │  scheduler (co 1min)         │
   │                           │  sprawdza PENDING > 5min     │
   │                           │  state: EXPIRED              │
   │                           │  Spring Event → audit log    │
+  │                           │  Spring Event → SSE push     │
   │                           │                              │
-  │── GET /status ───────────▶│                              │
-  │◀─ {EXPIRED} ─────────────│                              │
+  │◀─ event: EXPIRED ─────────│  (server pushuje)            │
+  │  (zamyka connection)       │                              │
 ```
 
 ### Closed Flow (nowy init gdy PENDING już istnieje)
@@ -128,14 +132,18 @@ Client                   auth-service              MobilePushService (SOAP)
 ```
 Client                   auth-service              MobilePushService (SOAP)
   │                           │                              │
-  │  (polling co 3s)          │  scheduler co 3s             │
+  │── GET /stream ───────────▶│  (SSE — otwiera connection)  │
+  │◀─ event: PENDING ─────────│                              │
+  │                           │                              │
+  │                           │  scheduler co 3s             │
   │                           │── GET /push/{delivId}/status▶│
   │                           │◀─ {REJECTED} ───────────────│
   │                           │  state: REJECTED             │
   │                           │  Spring Event → audit log    │
+  │                           │  Spring Event → SSE push     │
   │                           │                              │
-  │── GET /status ───────────▶│                              │
-  │◀─ {REJECTED} ────────────│                              │
+  │◀─ event: REJECTED ────────│  (server pushuje)            │
+  │  (zamyka connection)       │                              │
 ```
 
 ---
@@ -214,20 +222,23 @@ Client → POST /process/{id}/complete
 ```
 auth-service scheduler → widzi APPROVED w MobilePushService
 auth-service → zmienia stan procesu na APPROVED
-Client polluje GET /status → widzi APPROVED
+auth-service → Spring Event → SSE push do klienta
+Client otrzymuje event APPROVED (bez pollowania)
 ```
 
 **Plusy:**
 - **Zaufanie pochodzi od zewnętrznej usługi** — jedynego wiarygodnego źródła prawdy
 - Client nie może sfabrykować zatwierdzenia
 - Brak endpointu /complete = brak wektora ataku
-- Prostsze API klienta — tylko init, status, cancel
+- Prostsze API klienta — tylko init, stream (SSE), cancel
+- **Brak double-polling** — client nie polluje backendu, backend nie polluje klienta
 
 **Minusy:**
 - Opóźnienie = interwał schedulera (np. 3s) zamiast natychmiastowego complete
 - Scheduler musi działać niezawodnie
+- SSE wymaga utrzymania otwartego połączenia HTTP
 
-**Dlaczego B:** W systemie push-based zaufanie musi pochodzić od urządzenia mobilnego przez zewnętrzny provider, nie od klienta który może być skompromitowany lub działać złośliwie. Backend jako jedyny pośrednik gwarantuje że stan procesu odzwierciedla rzeczywistą akcję użytkownika na telefonie.
+**Dlaczego B:** W systemie push-based zaufanie musi pochodzić od urządzenia mobilnego przez zewnętrzny provider, nie od klienta który może być skompromitowany lub działać złośliwie. Backend jako jedyny pośrednik gwarantuje że stan procesu odzwierciedla rzeczywistą akcję użytkownika na telefonie. SSE eliminuje zbędny client-side polling — klient reaguje na event zamiast odpytywać w ciemno.
 
 ### Concurrency — CLOSED
 

@@ -27,13 +27,10 @@ import pl.kathelan.soap.push.generated.GetUserCapabilitiesResponse;
 import pl.kathelan.soap.push.generated.SendPushResponse;
 import pl.kathelan.soap.push.generated.SendStatus;
 
-import javax.xml.datatype.DatatypeConfigurationException;
-import javax.xml.datatype.DatatypeFactory;
-import javax.xml.datatype.XMLGregorianCalendar;
+import pl.kathelan.common.util.XmlDateTimeUtils;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -92,6 +89,7 @@ class AuthProcessServiceTest {
         InitProcessResponse response = service.initProcess(new InitProcessRequest("user1", pl.kathelan.auth.api.dto.AuthMethod.PUSH));
 
         assertThat(response.processId()).isNotNull();
+        assertThat(response.expiresAt()).isNotNull().isAfter(LocalDateTime.now());
     }
 
     @Test
@@ -170,16 +168,7 @@ class AuthProcessServiceTest {
         SendPushResponse response = new SendPushResponse();
         response.setDeliveryId(deliveryId);
         response.setSendStatus(SendStatus.SENT);
-        response.setExpiresAt(toXmlDateTime(LocalDateTime.now().plusMinutes(2)));
+        response.setExpiresAt(XmlDateTimeUtils.toXmlGregorianCalendar(LocalDateTime.now().plusMinutes(2)));
         when(mobilePushClient.sendPush(anyString(), anyString())).thenReturn(response);
-    }
-
-    private static XMLGregorianCalendar toXmlDateTime(LocalDateTime dt) {
-        try {
-            GregorianCalendar gc = GregorianCalendar.from(dt.atZone(ZoneId.systemDefault()));
-            return DatatypeFactory.newInstance().newXMLGregorianCalendar(gc);
-        } catch (DatatypeConfigurationException e) {
-            throw new IllegalStateException(e);
-        }
     }
 }

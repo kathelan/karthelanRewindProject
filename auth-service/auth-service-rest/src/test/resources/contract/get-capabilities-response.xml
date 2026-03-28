@@ -1,0 +1,9 @@
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+  <SOAP-ENV:Body>
+    <ns2:getUserCapabilitiesResponse xmlns:ns2="http://kathelan.pl/soap/push">
+      <ns2:userId>user-contract</ns2:userId>
+      <ns2:active>true</ns2:active>
+      <ns2:authMethods>PUSH</ns2:authMethods>
+    </ns2:getUserCapabilitiesResponse>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>

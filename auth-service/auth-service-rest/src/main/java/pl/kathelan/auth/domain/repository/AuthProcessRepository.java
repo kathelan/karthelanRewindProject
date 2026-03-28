@@ -2,6 +2,7 @@ package pl.kathelan.auth.domain.repository;
 
 import pl.kathelan.auth.domain.AuthProcess;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -11,4 +12,5 @@ public interface AuthProcessRepository {
     Optional<AuthProcess> findById(UUID id);
     Optional<AuthProcess> findPendingByUserId(String userId);
     List<AuthProcess> findAllPending();
+    List<AuthProcess> findPendingExpiredBefore(LocalDateTime threshold);
 }

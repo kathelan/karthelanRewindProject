@@ -12,3 +12,20 @@ services:
       dockerfile: user-service/Dockerfile
     ports:
       - "8081:8081"
+    environment:
+      SOAP_CLIENT_URL: http://soap-service:8080/ws
+    depends_on:
+      - soap-service
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      SOAP_CLIENT_URL: http://soap-service:8080/ws
+      SOAP_CLIENT_USERNAME: admin
+      SOAP_CLIENT_PASSWORD: adminpass
+    depends_on:
+      - soap-service

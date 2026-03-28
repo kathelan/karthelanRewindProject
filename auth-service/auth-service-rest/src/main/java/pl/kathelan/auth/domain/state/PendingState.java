@@ -2,7 +2,6 @@ package pl.kathelan.auth.domain.state;
 
 import pl.kathelan.auth.api.dto.ProcessState;
 import pl.kathelan.auth.api.exception.InvalidStateTransitionException;
-import pl.kathelan.auth.domain.visitor.AuthStateVisitor;
 
 import java.util.Set;
 
@@ -33,8 +32,4 @@ public final class PendingState implements AuthProcessState {
         }
     }
 
-    @Override
-    public void accept(AuthStateVisitor visitor) {
-        visitor.visit(this);
-    }
 }

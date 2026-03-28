@@ -3,6 +3,7 @@ package pl.kathelan.soap.client;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ws.client.core.WebServiceTemplate;
+import pl.kathelan.soap.client.exception.SoapClientException;
 import pl.kathelan.soap.push.generated.GetPushStatusRequest;
 import pl.kathelan.soap.push.generated.GetPushStatusResponse;
 import pl.kathelan.soap.push.generated.GetUserCapabilitiesRequest;
@@ -23,7 +24,9 @@ public class MobilePushClientImpl implements MobilePushClient {
         request.setUserId(userId);
         GetUserCapabilitiesResponse response =
                 (GetUserCapabilitiesResponse) webServiceTemplate.marshalSendAndReceive(request);
-        log.debug("getUserCapabilities: response received, errorCode={}", response.getErrorCode());
+        if (response.getErrorCode() != null) {
+            throw new SoapClientException(response.getErrorCode().value(), response.getMessage());
+        }
         return response;
     }
 
@@ -34,6 +37,9 @@ public class MobilePushClientImpl implements MobilePushClient {
         request.setUserId(userId);
         request.setProcessId(processId);
         SendPushResponse response = (SendPushResponse) webServiceTemplate.marshalSendAndReceive(request);
+        if (response.getErrorCode() != null) {
+            throw new SoapClientException(response.getErrorCode().value(), response.getMessage());
+        }
         log.debug("sendPush: response received, sendStatus={}", response.getSendStatus());
         return response;
     }
@@ -45,6 +51,9 @@ public class MobilePushClientImpl implements MobilePushClient {
         request.setDeliveryId(deliveryId);
         GetPushStatusResponse response =
                 (GetPushStatusResponse) webServiceTemplate.marshalSendAndReceive(request);
+        if (response.getErrorCode() != null) {
+            throw new SoapClientException(response.getErrorCode().value(), response.getMessage());
+        }
         log.debug("getPushStatus: response received, pushStatus={}", response.getPushStatus());
         return response;
     }

@@ -28,6 +28,12 @@ public class InMemoryCapabilitiesRepository implements CapabilitiesRepository {
         return Optional.ofNullable(store.get(userId));
     }
 
+    @Override
+    public void save(UserCapabilities capabilities) {
+        store.put(capabilities.getUserId(), capabilities);
+        log.debug("save: userId={}", capabilities.getUserId());
+    }
+
     private void seed() {
         store.put("user-push", UserCapabilities.builder()
                 .userId("user-push")

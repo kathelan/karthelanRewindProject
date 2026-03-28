@@ -43,6 +43,11 @@ public class InMemoryPushRepository implements PushRepository {
         log.info("updateStatus: deliveryId={}, status={}", deliveryId, status);
     }
 
+    public void clear() {
+        store.clear();
+        log.info("clear: push repository cleared");
+    }
+
     @Override
     public List<PushRecord> findPendingOlderThan(Duration age) {
         LocalDateTime threshold = LocalDateTime.now().minus(age);

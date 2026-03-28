@@ -94,6 +94,11 @@
                 <artifactId>auth-service-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>pl.kathelan</groupId>
+                <artifactId>soap-service-rest</artifactId>
+                <version>${project.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

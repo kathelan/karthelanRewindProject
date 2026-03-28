@@ -1,0 +1,20 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: auth-service
+  profiles:
+    active: local
+
+soap:
+  client:
+    url: http://localhost:8080/ws
+    username: admin
+    password: adminpass
+    connect-timeout-ms: 5000
+    read-timeout-ms: 10000
+
+logging:
+  level:
+    pl.kathelan.auth: DEBUG

@@ -11,7 +11,6 @@ import pl.kathelan.auth.api.dto.AuthMethod;
 import pl.kathelan.auth.api.dto.ProcessState;
 import pl.kathelan.auth.api.dto.InitProcessRequest;
 import pl.kathelan.auth.api.dto.InitProcessResponse;
-import pl.kathelan.auth.api.dto.ProcessStatusResponse;
 import pl.kathelan.auth.domain.repository.InMemoryAuthProcessRepository;
 import pl.kathelan.auth.event.AuthProcessStateChangedEvent;
 import pl.kathelan.common.resilience.ResilientCaller;
@@ -26,14 +25,10 @@ import pl.kathelan.soap.push.generated.PushStatus;
 import pl.kathelan.soap.push.generated.SendPushResponse;
 import pl.kathelan.soap.push.generated.SendStatus;
 
-import javax.xml.datatype.DatatypeConfigurationException;
-import javax.xml.datatype.DatatypeFactory;
-import javax.xml.datatype.XMLGregorianCalendar;
+import pl.kathelan.common.util.XmlDateTimeUtils;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.GregorianCalendar;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -155,13 +150,51 @@ class AuthProcessServiceSchedulerTest {
         verify(eventPublisher, never()).publishEvent(anyString());
     }
 
+    // --- expireOverdueProcesses ---
+
+    @Test
+    void expireOverdueProcesses_expiresProcessPastExpiresAt() {
+        stubSendPushWithExpiry("delivery-1", LocalDateTime.now().minusSeconds(1));
+        InitProcessResponse init = service.initProcess(new InitProcessRequest("user1", AuthMethod.PUSH));
+
+        service.expireOverdueProcesses();
+
+        assertThat(service.getStatus(UUID.fromString(init.processId())).state()).isEqualTo(ProcessState.EXPIRED);
+    }
+
+    @Test
+    void expireOverdueProcesses_doesNotExpireProcessNotYetExpired() {
+        stubSendPush("delivery-1");
+        InitProcessResponse init = service.initProcess(new InitProcessRequest("user1", AuthMethod.PUSH));
+
+        service.expireOverdueProcesses();
+
+        assertThat(service.getStatus(UUID.fromString(init.processId())).state()).isEqualTo(ProcessState.PENDING);
+    }
+
+    @Test
+    void expireOverdueProcesses_publishesExpiredEvent() {
+        stubSendPushWithExpiry("delivery-1", LocalDateTime.now().minusSeconds(1));
+        service.initProcess(new InitProcessRequest("user1", AuthMethod.PUSH));
+
+        service.expireOverdueProcesses();
+
+        ArgumentCaptor<AuthProcessStateChangedEvent> captor = ArgumentCaptor.forClass(AuthProcessStateChangedEvent.class);
+        verify(eventPublisher, atLeastOnce()).publishEvent(captor.capture());
+        assertThat(captor.getAllValues()).anyMatch(e -> e.newState() == ProcessState.EXPIRED);
+    }
+
     // --- helpers ---
 
     private void stubSendPush(String deliveryId) {
+        stubSendPushWithExpiry(deliveryId, LocalDateTime.now().plusMinutes(2));
+    }
+
+    private void stubSendPushWithExpiry(String deliveryId, LocalDateTime expiresAt) {
         SendPushResponse response = new SendPushResponse();
         response.setDeliveryId(deliveryId);
         response.setSendStatus(SendStatus.SENT);
-        response.setExpiresAt(toXmlDateTime(LocalDateTime.now().plusMinutes(2)));
+        response.setExpiresAt(XmlDateTimeUtils.toXmlGregorianCalendar(expiresAt));
         when(mobilePushClient.sendPush(anyString(), anyString())).thenReturn(response);
     }
 
@@ -170,14 +203,5 @@ class AuthProcessServiceSchedulerTest {
         response.setDeliveryId(deliveryId);
         response.setPushStatus(status);
         when(mobilePushClient.getPushStatus(deliveryId)).thenReturn(response);
-    }
-
-    private static XMLGregorianCalendar toXmlDateTime(LocalDateTime dt) {
-        try {
-            GregorianCalendar gc = GregorianCalendar.from(dt.atZone(ZoneId.systemDefault()));
-            return DatatypeFactory.newInstance().newXMLGregorianCalendar(gc);
-        } catch (DatatypeConfigurationException e) {
-            throw new IllegalStateException(e);
-        }
     }
 }

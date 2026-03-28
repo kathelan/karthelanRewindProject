@@ -18,4 +18,10 @@ public class AuthProcessScheduler {
         log.debug("Running push status poll");
         schedulerService.pollAndUpdatePushStatuses();
     }
+
+    @Scheduled(fixedDelay = 10_000)
+    public void expireOverdue() {
+        log.debug("Running overdue process expiry check");
+        schedulerService.expireOverdueProcesses();
+    }
 }

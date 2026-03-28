@@ -1,0 +1,8 @@
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+  <SOAP-ENV:Body>
+    <ns2:getPushStatusResponse xmlns:ns2="http://kathelan.pl/soap/push">
+      <ns2:deliveryId>delivery-contract-1</ns2:deliveryId>
+      <ns2:pushStatus>APPROVED</ns2:pushStatus>
+    </ns2:getPushStatusResponse>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>

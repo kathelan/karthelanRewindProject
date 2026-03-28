@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import pl.kathelan.auth.api.dto.AuthMethod;
 import pl.kathelan.auth.domain.AuthProcess;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -82,5 +83,42 @@ class InMemoryAuthProcessRepositoryTest {
         repository.save(process.expire());
 
         assertThat(repository.findAllPending()).isEmpty();
+    }
+
+    @Test
+    void findPendingExpiredBefore_returnsExpiredProcesses() {
+        AuthProcess process = AuthProcess.create("user1", AuthMethod.PUSH);
+        AuthProcess withExpiry = process.assignDelivery("d1", LocalDateTime.now().minusMinutes(1));
+        repository.save(withExpiry);
+
+        List<AuthProcess> result = repository.findPendingExpiredBefore(LocalDateTime.now());
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).id()).isEqualTo(process.id());
+    }
+
+    @Test
+    void findPendingExpiredBefore_ignoresNotYetExpired() {
+        AuthProcess process = AuthProcess.create("user1", AuthMethod.PUSH);
+        AuthProcess withExpiry = process.assignDelivery("d1", LocalDateTime.now().plusMinutes(2));
+        repository.save(withExpiry);
+
+        assertThat(repository.findPendingExpiredBefore(LocalDateTime.now())).isEmpty();
+    }
+
+    @Test
+    void findPendingExpiredBefore_ignoresTerminalProcesses() {
+        AuthProcess process = AuthProcess.create("user1", AuthMethod.PUSH);
+        AuthProcess withExpiry = process.assignDelivery("d1", LocalDateTime.now().minusMinutes(1));
+        repository.save(withExpiry.cancel());
+
+        assertThat(repository.findPendingExpiredBefore(LocalDateTime.now())).isEmpty();
+    }
+
+    @Test
+    void findPendingExpiredBefore_ignoresProcessesWithoutExpiresAt() {
+        repository.save(AuthProcess.create("user1", AuthMethod.PUSH));
+
+        assertThat(repository.findPendingExpiredBefore(LocalDateTime.now())).isEmpty();
     }
 }

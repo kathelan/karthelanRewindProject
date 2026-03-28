@@ -8,5 +8,6 @@ public record ProcessStatusResponse(
         ProcessState state,
         AuthMethod authMethod,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        LocalDateTime expiresAt
 ) {}

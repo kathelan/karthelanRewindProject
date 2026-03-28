@@ -28,4 +28,11 @@ class AuthProcessSchedulerTest {
 
         verify(schedulerService).pollAndUpdatePushStatuses();
     }
+
+    @Test
+    void expireOverdue_delegatesToService() {
+        scheduler.expireOverdue();
+
+        verify(schedulerService).expireOverdueProcesses();
+    }
 }

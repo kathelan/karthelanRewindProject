@@ -56,8 +56,8 @@ public record AuthProcess(
         return transition(new ClosedState());
     }
 
-    public AuthProcess withDeliveryId(String deliveryId, LocalDateTime expiresAt) {
-        return new AuthProcess(id, userId, authMethod, deliveryId, state, createdAt, updatedAt, expiresAt);
+    public AuthProcess assignDelivery(String deliveryId, LocalDateTime expiresAt) {
+        return new AuthProcess(id, userId, authMethod, deliveryId, state, createdAt, LocalDateTime.now(), expiresAt);
     }
 
     private AuthProcess transition(AuthProcessState newState) {
