@@ -28,6 +28,8 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Override to run performance tests: -Dexcluded.test.groups="" -Dgroups=performance -->
         <excluded.test.groups>performance</excluded.test.groups>
+        <wiremock.version>3.12.1</wiremock.version>
+        <jaxws.version>4.0.3</jaxws.version>
     </properties>
 
     <build>
@@ -37,6 +39,11 @@
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>jaxb2-maven-plugin</artifactId>
                     <version>3.1.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.sun.xml.ws</groupId>
+                    <artifactId>jaxws-maven-plugin</artifactId>
+                    <version>${jaxws.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -61,16 +68,36 @@
                         </annotationProcessorPaths>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>test-jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
 
     <dependencyManagement>
         <dependencies>
+            <!-- Internal modules -->
             <dependency>
                 <groupId>pl.kathelan</groupId>
                 <artifactId>core-common</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>pl.kathelan</groupId>
+                <artifactId>core-common</artifactId>
+                <version>${project.version}</version>
+                <classifier>tests</classifier>
+                <type>test-jar</type>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>pl.kathelan</groupId>
@@ -80,6 +107,19 @@
             <dependency>
                 <groupId>pl.kathelan</groupId>
                 <artifactId>soap-service-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>pl.kathelan</groupId>
+                <artifactId>soap-service-client</artifactId>
+                <version>${project.version}</version>
+                <classifier>tests</classifier>
+                <type>test-jar</type>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>pl.kathelan</groupId>
+                <artifactId>soap-service-rest</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -97,10 +137,17 @@
                 <artifactId>auth-service-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <!-- Third-party versions not managed by Spring Boot BOM -->
             <dependency>
-                <groupId>pl.kathelan</groupId>
-                <artifactId>soap-service-rest</artifactId>
-                <version>${project.version}</version>
+                <groupId>org.wiremock</groupId>
+                <artifactId>wiremock-standalone</artifactId>
+                <version>${wiremock.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.ws</groupId>
+                <artifactId>jaxws-rt</artifactId>
+                <version>${jaxws.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -110,10 +157,6 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

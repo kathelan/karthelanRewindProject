@@ -15,6 +15,14 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
             <groupId>pl.kathelan</groupId>
             <artifactId>auth-service-api</artifactId>
         </dependency>
@@ -26,17 +34,25 @@
             <groupId>pl.kathelan</groupId>
             <artifactId>core-common</artifactId>
         </dependency>
+        <!-- Test -->
         <dependency>
             <groupId>pl.kathelan</groupId>
             <artifactId>core-common</artifactId>
-            <version>${project.version}</version>
             <classifier>tests</classifier>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
+            <groupId>pl.kathelan</groupId>
+            <artifactId>soap-service-client</artifactId>
+            <classifier>tests</classifier>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>pl.kathelan</groupId>
+            <artifactId>soap-service-rest</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -46,20 +62,6 @@
         <dependency>
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock-standalone</artifactId>
-            <version>3.12.1</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>pl.kathelan</groupId>
-            <artifactId>soap-service-rest</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>pl.kathelan</groupId>
-            <artifactId>soap-service-client</artifactId>
-            <version>${project.version}</version>
-            <classifier>tests</classifier>
-            <type>test-jar</type>
             <scope>test</scope>
         </dependency>
     </dependencies>
