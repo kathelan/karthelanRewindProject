@@ -30,6 +30,18 @@
             <groupId>pl.kathelan</groupId>
             <artifactId>soap-service-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>pl.kathelan</groupId>
+            <artifactId>core-common</artifactId>
+            <version>${project.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

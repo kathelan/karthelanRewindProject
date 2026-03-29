@@ -1,118 +1,113 @@
 package pl.kathelan.user.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
 import pl.kathelan.common.resilience.exception.CircuitOpenException;
+import pl.kathelan.user.UserServiceBaseTest;
 import pl.kathelan.user.api.dto.AddressDto;
 import pl.kathelan.user.api.dto.CreateUserRequestDto;
 import pl.kathelan.user.api.dto.UserDto;
 import pl.kathelan.user.exception.UserAlreadyExistsException;
 import pl.kathelan.user.exception.UserNotFoundException;
-import pl.kathelan.user.service.UserService;
 
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(UserController.class)
-class UserControllerTest {
-
-    @Autowired private MockMvc mockMvc;
-    @Autowired private ObjectMapper objectMapper;
-
-    @MockitoBean private UserService userService;
+class UserControllerTest extends UserServiceBaseTest {
 
     private static final AddressDto ADDRESS = new AddressDto("ul. Testowa 1", "Warsaw", "00-001", "Poland");
 
+    // --- GET /users/{id} ---
+
     @Test
-    void shouldReturn200WithUser_whenFound() throws Exception {
+    void getUser_returns200WithUser() {
         when(userService.getUser("id-1")).thenReturn(
                 new UserDto("id-1", "Jan", "Kowalski", "jan@example.com", ADDRESS));
 
-        mockMvc.perform(get("/users/id-1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value("id-1"))
-                .andExpect(jsonPath("$.data.email").value("jan@example.com"))
-                .andExpect(jsonPath("$.data.address.city").value("Warsaw"));
+        doGet("/users/{id}", "id-1")
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.data.id").isEqualTo("id-1")
+                .jsonPath("$.data.email").isEqualTo("jan@example.com")
+                .jsonPath("$.data.address.city").isEqualTo("Warsaw");
     }
 
     @Test
-    void shouldReturn404_whenUserNotFound() throws Exception {
+    void getUser_returns404WhenNotFound() {
         when(userService.getUser("missing")).thenThrow(new UserNotFoundException("missing"));
 
-        mockMvc.perform(get("/users/missing"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.errorCode").value("USER_NOT_FOUND"))
-                .andExpect(jsonPath("$.data").doesNotExist());
+        doGet("/users/{id}", "missing")
+                .expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.errorCode").isEqualTo("USER_NOT_FOUND")
+                .jsonPath("$.data").doesNotExist();
     }
 
     @Test
-    void shouldReturn201_whenUserCreated() throws Exception {
+    void getUser_returns503WhenCircuitOpen() {
+        when(userService.getUser(any())).thenThrow(new CircuitOpenException("soap-service"));
+
+        doGet("/users/{id}", "any")
+                .expectStatus().isEqualTo(503)
+                .expectBody()
+                .jsonPath("$.errorCode").isEqualTo("SERVICE_UNAVAILABLE");
+    }
+
+    // --- POST /users ---
+
+    @Test
+    void createUser_returns201WithCreatedUser() {
         when(userService.createUser(any())).thenReturn(
                 new UserDto("new-id", "Anna", "Nowak", "anna@example.com", ADDRESS));
 
-        CreateUserRequestDto request = new CreateUserRequestDto(
-                "Anna", "Nowak", "anna@example.com", ADDRESS);
-
-        mockMvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.id").value("new-id"))
-                .andExpect(jsonPath("$.data.email").value("anna@example.com"));
+        doPost("/users", new CreateUserRequestDto("Anna", "Nowak", "anna@example.com", ADDRESS))
+                .expectStatus().isCreated()
+                .expectBody()
+                .jsonPath("$.data.id").isEqualTo("new-id")
+                .jsonPath("$.data.email").isEqualTo("anna@example.com");
     }
 
     @Test
-    void shouldReturn409_whenEmailAlreadyExists() throws Exception {
+    void createUser_returns409WhenEmailAlreadyExists() {
         when(userService.createUser(any())).thenThrow(new UserAlreadyExistsException("dup@example.com"));
 
-        CreateUserRequestDto request = new CreateUserRequestDto(
-                "Jan", "Kowalski", "dup@example.com", ADDRESS);
-
-        mockMvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.errorCode").value("USER_ALREADY_EXISTS"))
-                .andExpect(jsonPath("$.data").doesNotExist());
+        doPost("/users", new CreateUserRequestDto("Jan", "Kowalski", "dup@example.com", ADDRESS))
+                .expectStatus().isEqualTo(409)
+                .expectBody()
+                .jsonPath("$.errorCode").isEqualTo("USER_ALREADY_EXISTS")
+                .jsonPath("$.data").doesNotExist();
     }
 
     @Test
-    void shouldReturn200WithList_whenGetByCity() throws Exception {
+    void createUser_returns400WhenBodyInvalid() {
+        doPost("/users", new CreateUserRequestDto("", "", "not-an-email", null))
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.errorCode").isEqualTo("VALIDATION_ERROR");
+    }
+
+    // --- GET /users?city= ---
+
+    @Test
+    void getUsersByCity_returns200WithList() {
         when(userService.getUsersByCity("Warsaw")).thenReturn(List.of(
                 new UserDto("id-1", "Jan", "Kowalski", "a@example.com", ADDRESS),
                 new UserDto("id-2", "Anna", "Nowak", "b@example.com", ADDRESS)));
 
-        mockMvc.perform(get("/users").param("city", "Warsaw"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(2));
+        doGet("/users?city=Warsaw")
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.data.length()").isEqualTo(2);
     }
 
     @Test
-    void shouldReturn200WithEmptyList_whenNoCityMatch() throws Exception {
+    void getUsersByCity_returns200WithEmptyList() {
         when(userService.getUsersByCity("Berlin")).thenReturn(List.of());
 
-        mockMvc.perform(get("/users").param("city", "Berlin"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(0));
-    }
-
-    @Test
-    void shouldReturn503_whenCircuitOpen() throws Exception {
-        when(userService.getUser(any())).thenThrow(new CircuitOpenException("soap-service"));
-
-        mockMvc.perform(get("/users/any"))
-                .andExpect(status().isServiceUnavailable())
-                .andExpect(jsonPath("$.errorCode").value("SERVICE_UNAVAILABLE"));
+        doGet("/users?city=Berlin")
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.data.length()").isEqualTo(0);
     }
 }
