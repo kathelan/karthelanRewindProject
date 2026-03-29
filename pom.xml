@@ -26,6 +26,8 @@
     <properties>
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Override to run performance tests: -Dexcluded.test.groups="" -Dgroups=performance -->
+        <excluded.test.groups>performance</excluded.test.groups>
     </properties>
 
     <build>
@@ -41,6 +43,7 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <configuration>
                         <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+                        <excludedGroups>${excluded.test.groups}</excludedGroups>
                     </configuration>
                 </plugin>
                 <plugin>

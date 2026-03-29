@@ -82,7 +82,7 @@ public class AuthProcessServiceImpl implements AuthProcessService, AuthProcessSc
 
     @Override
     public void pollAndUpdatePushStatuses() {
-        repository.findAllPending().forEach(process -> {
+        repository.findAllPending().parallelStream().forEach(process -> {
             if (process.deliveryId() == null) return;
             GetPushStatusResponse statusResponse = resilientCaller.call(
                     () -> mobilePushClient.getPushStatus(process.deliveryId())
