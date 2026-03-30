@@ -22,6 +22,7 @@
         <module>soap-service</module>
         <module>user-service</module>
         <module>auth-service</module>
+        <module>db-performance</module>
     </modules>
 
     <properties>
