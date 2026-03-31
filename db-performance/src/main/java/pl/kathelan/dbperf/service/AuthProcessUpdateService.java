@@ -75,14 +75,15 @@ public class AuthProcessUpdateService {
     }
 
     private AuthProcess buildEntity(String userId, AuthProcessStatus status) {
+        LocalDateTime now = LocalDateTime.now();
         AuthProcess entity = new AuthProcess();
         entity.setUserId(userId);
         entity.setAuthMethod("BIOMETRIC");
         entity.setDeliveryId("delivery_jpa_" + System.nanoTime());
         entity.setStatus(status);
-        entity.setCreatedAt(LocalDateTime.now());
-        entity.setUpdatedAt(LocalDateTime.now());
-        entity.setExpiresAt(LocalDateTime.now().plusMinutes(5));
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
+        entity.setExpiresAt(now.plusMinutes(5));
         return entity;
     }
 }
