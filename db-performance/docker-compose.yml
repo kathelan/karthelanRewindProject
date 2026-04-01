@@ -23,5 +23,23 @@ services:
       timeout: 5s
       retries: 5
 
+  oracle-perf:
+    image: gvenzl/oracle-free:23-slim
+    container_name: oracle-perf
+    ports:
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: test
+    volumes:
+      - ./oracle-init:/docker-entrypoint-initdb.d
+      - oracle_perf_data:/opt/oracle/oradata
+    healthcheck:
+      test: [ "CMD-SHELL", "healthcheck.sh" ]
+      interval: 15s
+      timeout: 30s
+      retries: 20
+      start_period: 120s
+
 volumes:
   postgres_perf_data:
+  oracle_perf_data:
