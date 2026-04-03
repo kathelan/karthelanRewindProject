@@ -23,6 +23,7 @@
         <module>user-service</module>
         <module>auth-service</module>
         <module>db-performance</module>
+        <module>mapstruct-service</module>
     </modules>
 
     <properties>
