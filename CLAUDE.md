@@ -17,6 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `auth-service` | GOTOWY | Proces autoryzacji + SSE streaming (119 testów GREEN) |
 | `db-performance` | GOTOWY | Standalone testy wydajności PostgreSQL z TestContainers |
 | `mapstruct-service` | GOTOWY | MapStruct — 59 testów GREEN (features 1-42) |
+| `functional-service` | GOTOWY | Java Functional Interfaces — 142 testy GREEN (features 1-6) |
 
 ### Architektura soap-service
 
@@ -203,7 +204,8 @@ karthelan-rewind/
 │   ├── auth-service-api/
 │   └── auth-service-rest/    # SSE, polling, ResilientCaller
 ├── db-performance/           # Standalone TestContainers + PostgreSQL
-├── mapstruct-service/        # W toku
+├── mapstruct-service/        # MapStruct mappers
+├── functional-service/       # Functional interfaces: Supplier/Consumer/Function/Predicate + Stream/Optional
 ├── docker-compose.yml
 └── pom.xml                   # Root POM — wersje, pluginy, dependency management
 ```
