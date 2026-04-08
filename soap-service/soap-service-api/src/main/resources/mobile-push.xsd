@@ -48,6 +48,36 @@
         </xs:restriction>
     </xs:simpleType>
 
+    <!-- Account status -->
+    <xs:simpleType name="AccountStatus">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="ACTIVE"/>
+            <xs:enumeration value="BLOCKED"/>
+            <xs:enumeration value="SUSPENDED"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Device status -->
+    <xs:simpleType name="DeviceStatus">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="ACTIVE"/>
+            <xs:enumeration value="BLOCKED"/>
+            <xs:enumeration value="INACTIVE"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- Device complex type -->
+    <xs:complexType name="DeviceDto">
+        <xs:sequence>
+            <xs:element name="deviceId"        type="tns:NonEmptyString"/>
+            <xs:element name="status"          type="tns:DeviceStatus"/>
+            <xs:element name="isMainDevice"    type="xs:boolean"/>
+            <xs:element name="isPassiveMode"   type="xs:boolean"/>
+            <xs:element name="activationDate"  type="xs:dateTime" minOccurs="0"/>
+            <xs:element name="deviceType"      type="xs:string"   minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
     <!-- ===== getUserCapabilities ===== -->
 
     <xs:element name="getUserCapabilitiesRequest">
@@ -63,7 +93,9 @@
             <xs:sequence>
                 <xs:element name="userId"      type="tns:NonEmptyString" minOccurs="0"/>
                 <xs:element name="active"      type="xs:boolean"         minOccurs="0"/>
-                <xs:element name="authMethods" type="tns:AuthMethod"     minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element name="authMethods"  type="tns:AuthMethod"     minOccurs="0" maxOccurs="unbounded"/>
+                <xs:element name="accountStatus" type="tns:AccountStatus"  minOccurs="0"/>
+                <xs:element name="devices"       type="tns:DeviceDto"      minOccurs="0" maxOccurs="unbounded"/>
                 <xs:element name="errorCode"   type="tns:ErrorCode"      minOccurs="0"/>
                 <xs:element name="message"     type="xs:string"          minOccurs="0"/>
             </xs:sequence>

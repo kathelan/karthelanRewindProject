@@ -13,6 +13,11 @@ import pl.kathelan.auth.api.dto.InitProcessRequest;
 import pl.kathelan.auth.api.dto.InitProcessResponse;
 import pl.kathelan.auth.domain.repository.InMemoryAuthProcessRepository;
 import pl.kathelan.auth.event.AuthProcessStateChangedEvent;
+import pl.kathelan.auth.mapper.CapabilitiesMapper;
+import pl.kathelan.auth.pipeline.ActiveDeviceValidationStep;
+import pl.kathelan.auth.pipeline.ActivationDateFilter;
+import pl.kathelan.auth.pipeline.DeviceProcessingPipeline;
+import pl.kathelan.auth.pipeline.PassiveModeFilter;
 import pl.kathelan.common.resilience.ResilientCaller;
 import pl.kathelan.common.resilience.circuitbreaker.CircuitBreakerConfig;
 import pl.kathelan.common.resilience.circuitbreaker.CountBasedCircuitBreaker;
@@ -29,6 +34,7 @@ import pl.kathelan.common.util.XmlDateTimeUtils;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -59,7 +65,10 @@ class AuthProcessServiceSchedulerTest {
         ResilientCaller resilientCaller = new ResilientCaller(
                 cb, new RetryExecutor(), new RetryConfig(2, Duration.ZERO, 1.0, Set.of(RuntimeException.class))
         );
-        service = new AuthProcessServiceImpl(new InMemoryAuthProcessRepository(), mobilePushClient, resilientCaller, eventPublisher);
+        DeviceProcessingPipeline pipeline = new DeviceProcessingPipeline(
+                List.of(new ActiveDeviceValidationStep(), new PassiveModeFilter(), new ActivationDateFilter())
+        );
+        service = new AuthProcessServiceImpl(new InMemoryAuthProcessRepository(), mobilePushClient, resilientCaller, eventPublisher, pipeline, new CapabilitiesMapper());
     }
 
     // --- cancel publishes event ---

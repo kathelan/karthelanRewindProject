@@ -21,12 +21,7 @@ import pl.kathelan.soap.push.mapper.MobilePushMapper;
 import pl.kathelan.soap.push.repository.CapabilitiesRepository;
 import pl.kathelan.soap.push.repository.PushRepository;
 
-import javax.xml.datatype.DatatypeConfigurationException;
-import javax.xml.datatype.DatatypeFactory;
-import javax.xml.datatype.XMLGregorianCalendar;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.GregorianCalendar;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -93,7 +88,7 @@ public class MobilePushEndpoint {
         log.info("sendPush: push sent, deliveryId={}", deliveryId);
         response.setDeliveryId(deliveryId);
         response.setSendStatus(mapper.toGenerated(SendStatus.SENT));
-        response.setExpiresAt(toXmlDateTime(expiresAt));
+        response.setExpiresAt(mapper.toXmlDateTime(expiresAt));
         return response;
     }
 
@@ -116,12 +111,4 @@ public class MobilePushEndpoint {
         return response;
     }
 
-    private static XMLGregorianCalendar toXmlDateTime(LocalDateTime dt) {
-        try {
-            GregorianCalendar gc = GregorianCalendar.from(dt.atZone(ZoneId.systemDefault()));
-            return DatatypeFactory.newInstance().newXMLGregorianCalendar(gc);
-        } catch (DatatypeConfigurationException e) {
-            throw new IllegalStateException("Cannot create XMLGregorianCalendar", e);
-        }
-    }
 }

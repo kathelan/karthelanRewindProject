@@ -3,8 +3,8 @@ package pl.kathelan.auth.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import pl.kathelan.auth.api.dto.AuthMethod;
 import pl.kathelan.auth.api.dto.CapabilitiesResponse;
+import pl.kathelan.auth.api.dto.DeviceDto;
 import pl.kathelan.auth.api.dto.InitProcessRequest;
 import pl.kathelan.auth.api.dto.InitProcessResponse;
 import pl.kathelan.auth.api.dto.ProcessStatusResponse;
@@ -13,6 +13,8 @@ import pl.kathelan.auth.domain.AuthProcess;
 import pl.kathelan.auth.domain.repository.AuthProcessRepository;
 import pl.kathelan.auth.event.AuthProcessStateChangedEvent;
 import pl.kathelan.auth.mapper.AuthProcessMapper;
+import pl.kathelan.auth.mapper.CapabilitiesMapper;
+import pl.kathelan.auth.pipeline.DeviceProcessingPipeline;
 import pl.kathelan.common.resilience.ResilientCaller;
 import pl.kathelan.common.util.XmlDateTimeUtils;
 import pl.kathelan.soap.client.MobilePushClient;
@@ -32,6 +34,8 @@ public class AuthProcessServiceImpl implements AuthProcessService, AuthProcessSc
     private final MobilePushClient mobilePushClient;
     private final ResilientCaller resilientCaller;
     private final ApplicationEventPublisher eventPublisher;
+    private final DeviceProcessingPipeline deviceProcessingPipeline;
+    private final CapabilitiesMapper capabilitiesMapper;
 
     // Per-user lock: prevents two simultaneous initProcess for the same userId
     // from both finding no pending process and creating two concurrent PENDING entries.
@@ -43,10 +47,12 @@ public class AuthProcessServiceImpl implements AuthProcessService, AuthProcessSc
     public CapabilitiesResponse getCapabilities(String userId) {
         log.info("getCapabilities: userId={}", userId);
         GetUserCapabilitiesResponse soap = resilientCaller.call(() -> mobilePushClient.getUserCapabilities(userId));
-        List<AuthMethod> methods = soap.getAuthMethods().stream()
-                .map(m -> AuthMethod.valueOf(m.name()))
-                .toList();
-        return new CapabilitiesResponse(soap.getUserId(), soap.isActive(), methods);
+        CapabilitiesResponse mapped = capabilitiesMapper.toCapabilitiesResponse(soap);
+        if (mapped.devices().isEmpty()) {
+            return mapped;
+        }
+        List<DeviceDto> filteredDevices = deviceProcessingPipeline.execute(mapped.devices(), userId);
+        return new CapabilitiesResponse(mapped.userId(), mapped.active(), mapped.accountStatus(), mapped.authMethods(), filteredDevices);
     }
 
     @Override

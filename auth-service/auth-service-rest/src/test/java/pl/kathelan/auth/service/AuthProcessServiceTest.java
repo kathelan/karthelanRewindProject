@@ -7,6 +7,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import pl.kathelan.auth.api.dto.AuthMethod;
+import pl.kathelan.auth.mapper.CapabilitiesMapper;
+import pl.kathelan.auth.pipeline.ActiveDeviceValidationStep;
+import pl.kathelan.auth.pipeline.ActivationDateFilter;
+import pl.kathelan.auth.pipeline.DeviceProcessingPipeline;
+import pl.kathelan.auth.pipeline.PassiveModeFilter;
 import pl.kathelan.common.resilience.ResilientCaller;
 import pl.kathelan.common.resilience.circuitbreaker.CircuitBreakerConfig;
 import pl.kathelan.common.resilience.circuitbreaker.CountBasedCircuitBreaker;
@@ -60,7 +65,10 @@ class AuthProcessServiceTest {
         ResilientCaller resilientCaller = new ResilientCaller(
                 cb, new RetryExecutor(), new RetryConfig(2, Duration.ZERO, 1.0, Set.of(RuntimeException.class))
         );
-        service = new AuthProcessServiceImpl(new InMemoryAuthProcessRepository(), mobilePushClient, resilientCaller, eventPublisher);
+        DeviceProcessingPipeline pipeline = new DeviceProcessingPipeline(
+                List.of(new ActiveDeviceValidationStep(), new PassiveModeFilter(), new ActivationDateFilter())
+        );
+        service = new AuthProcessServiceImpl(new InMemoryAuthProcessRepository(), mobilePushClient, resilientCaller, eventPublisher, pipeline, new CapabilitiesMapper());
     }
 
     // --- getCapabilities ---
@@ -71,13 +79,16 @@ class AuthProcessServiceTest {
         soapResponse.setUserId("user1");
         soapResponse.setActive(true);
         soapResponse.getAuthMethods().add(pl.kathelan.soap.push.generated.AuthMethod.PUSH);
+        // accountStatus is null → returns null-accountStatus path with empty lists
         when(mobilePushClient.getUserCapabilities("user1")).thenReturn(soapResponse);
 
         CapabilitiesResponse result = service.getCapabilities("user1");
 
         assertThat(result.userId()).isEqualTo("user1");
         assertThat(result.active()).isTrue();
+        assertThat(result.accountStatus()).isNull();
         assertThat(result.authMethods()).containsExactly(pl.kathelan.auth.api.dto.AuthMethod.PUSH);
+        assertThat(result.devices()).isEmpty();
     }
 
     // --- initProcess ---

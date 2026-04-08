@@ -11,4 +11,6 @@ public class UserCapabilities {
     String userId;
     boolean active;
     List<AuthMethod> authMethods;
+    AccountStatus accountStatus;
+    List<DeviceInfo> devices;
 }

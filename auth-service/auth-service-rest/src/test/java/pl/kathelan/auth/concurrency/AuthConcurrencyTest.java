@@ -10,6 +10,11 @@ import pl.kathelan.auth.api.dto.AuthMethod;
 import pl.kathelan.auth.api.dto.InitProcessRequest;
 import pl.kathelan.auth.api.dto.ProcessState;
 import pl.kathelan.auth.domain.repository.InMemoryAuthProcessRepository;
+import pl.kathelan.auth.mapper.CapabilitiesMapper;
+import pl.kathelan.auth.pipeline.ActiveDeviceValidationStep;
+import pl.kathelan.auth.pipeline.ActivationDateFilter;
+import pl.kathelan.auth.pipeline.DeviceProcessingPipeline;
+import pl.kathelan.auth.pipeline.PassiveModeFilter;
 import pl.kathelan.auth.service.AuthProcessServiceImpl;
 import pl.kathelan.common.resilience.ResilientCaller;
 import pl.kathelan.common.resilience.circuitbreaker.CircuitBreakerConfig;
@@ -24,6 +29,7 @@ import pl.kathelan.soap.push.generated.SendStatus;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -55,7 +61,10 @@ class AuthConcurrencyTest {
         ResilientCaller resilientCaller = new ResilientCaller(
                 cb, new RetryExecutor(), new RetryConfig(1, Duration.ZERO, 1.0, Set.of(RuntimeException.class))
         );
-        service = new AuthProcessServiceImpl(repository, mobilePushClient, resilientCaller, eventPublisher);
+        DeviceProcessingPipeline pipeline = new DeviceProcessingPipeline(
+                List.of(new ActiveDeviceValidationStep(), new PassiveModeFilter(), new ActivationDateFilter())
+        );
+        service = new AuthProcessServiceImpl(repository, mobilePushClient, resilientCaller, eventPublisher, pipeline, new CapabilitiesMapper());
 
         SendPushResponse response = new SendPushResponse();
         response.setDeliveryId("delivery-concurrent");

@@ -5,5 +5,7 @@ import java.util.List;
 public record CapabilitiesResponse(
         String userId,
         boolean active,
-        List<AuthMethod> authMethods
+        AccountStatus accountStatus,
+        List<AuthMethod> authMethods,
+        List<DeviceDto> devices
 ) {}

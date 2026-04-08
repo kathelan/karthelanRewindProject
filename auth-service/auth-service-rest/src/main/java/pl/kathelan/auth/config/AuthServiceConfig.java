@@ -4,6 +4,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import pl.kathelan.auth.domain.repository.AuthProcessRepository;
+import pl.kathelan.auth.mapper.CapabilitiesMapper;
+import pl.kathelan.auth.pipeline.DeviceProcessingPipeline;
 import pl.kathelan.auth.service.AuthProcessServiceImpl;
 import pl.kathelan.common.resilience.ResilientCaller;
 import pl.kathelan.common.resilience.circuitbreaker.CircuitBreakerConfig;
@@ -42,7 +44,9 @@ public class AuthServiceConfig {
             AuthProcessRepository repository,
             MobilePushClient mobilePushClient,
             ResilientCaller mobilePushResilientCaller,
-            ApplicationEventPublisher eventPublisher) {
-        return new AuthProcessServiceImpl(repository, mobilePushClient, mobilePushResilientCaller, eventPublisher);
+            ApplicationEventPublisher eventPublisher,
+            DeviceProcessingPipeline deviceProcessingPipeline,
+            CapabilitiesMapper capabilitiesMapper) {
+        return new AuthProcessServiceImpl(repository, mobilePushClient, mobilePushResilientCaller, eventPublisher, deviceProcessingPipeline, capabilitiesMapper);
     }
 }
