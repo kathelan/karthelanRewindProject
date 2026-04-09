@@ -18,7 +18,7 @@ import pl.kathelan.soap.api.generated.GetUserResponse;
 import pl.kathelan.soap.api.generated.GetUsersByCityResponse;
 import pl.kathelan.soap.client.UserSoapClient;
 import pl.kathelan.soap.client.UserSoapClientImpl;
-import pl.kathelan.soap.repository.UserRepository;
+import pl.kathelan.soap.user.repository.UserRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

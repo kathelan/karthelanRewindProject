@@ -1,6 +1,6 @@
-package pl.kathelan.soap.repository;
+package pl.kathelan.soap.user.repository;
 
-import pl.kathelan.soap.domain.User;
+import pl.kathelan.soap.user.domain.User;
 
 import java.util.List;
 import java.util.Optional;

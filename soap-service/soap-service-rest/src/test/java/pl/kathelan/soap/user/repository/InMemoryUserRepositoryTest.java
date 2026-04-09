@@ -1,14 +1,13 @@
-package pl.kathelan.soap.repository;
+package pl.kathelan.soap.user.repository;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import pl.kathelan.soap.domain.Address;
-import pl.kathelan.soap.domain.User;
+import pl.kathelan.soap.user.domain.Address;
+import pl.kathelan.soap.user.domain.User;
+import pl.kathelan.soap.user.exception.UserAlreadyExistsException;
 
 import java.util.List;
 import java.util.Optional;
-
-import pl.kathelan.soap.exception.UserAlreadyExistsException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

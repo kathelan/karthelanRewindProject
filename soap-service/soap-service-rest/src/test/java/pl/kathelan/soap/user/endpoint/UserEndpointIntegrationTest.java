@@ -1,4 +1,4 @@
-package pl.kathelan.soap.endpoint;
+package pl.kathelan.soap.user.endpoint;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,9 +8,9 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.ws.test.server.MockWebServiceClient;
 import org.springframework.xml.transform.StringSource;
-import pl.kathelan.soap.domain.Address;
-import pl.kathelan.soap.domain.User;
-import pl.kathelan.soap.repository.UserRepository;
+import pl.kathelan.soap.user.domain.Address;
+import pl.kathelan.soap.user.domain.User;
+import pl.kathelan.soap.user.repository.UserRepository;
 
 import java.util.Map;
 
@@ -131,9 +131,6 @@ class UserEndpointIntegrationTest {
 
     // ===== helpers =====
 
-    /**
-     * Owija payload pełną kopertą SOAP z nagłówkiem WS-Security UsernameToken.
-     */
     private StringSource envelope(String payload) {
         return new StringSource("""
                 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"

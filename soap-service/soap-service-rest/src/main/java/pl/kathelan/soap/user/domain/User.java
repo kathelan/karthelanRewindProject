@@ -1,4 +1,4 @@
-package pl.kathelan.soap.domain;
+package pl.kathelan.soap.user.domain;
 
 import lombok.Builder;
 import lombok.Value;

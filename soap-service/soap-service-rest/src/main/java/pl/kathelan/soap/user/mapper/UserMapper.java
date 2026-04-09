@@ -1,10 +1,10 @@
-package pl.kathelan.soap.mapper;
+package pl.kathelan.soap.user.mapper;
 
 import org.springframework.stereotype.Component;
 import pl.kathelan.soap.api.generated.CreateUserRequest;
 import pl.kathelan.soap.api.generated.UserDto;
-import pl.kathelan.soap.domain.Address;
-import pl.kathelan.soap.domain.User;
+import pl.kathelan.soap.user.domain.Address;
+import pl.kathelan.soap.user.domain.User;
 
 @Component
 public class UserMapper {

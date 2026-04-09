@@ -1,4 +1,4 @@
-package pl.kathelan.soap.endpoint;
+package pl.kathelan.soap.user.endpoint;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,10 +13,10 @@ import pl.kathelan.soap.api.generated.GetUserRequest;
 import pl.kathelan.soap.api.generated.GetUserResponse;
 import pl.kathelan.soap.api.generated.GetUsersByCityRequest;
 import pl.kathelan.soap.api.generated.GetUsersByCityResponse;
-import pl.kathelan.soap.domain.User;
-import pl.kathelan.soap.exception.UserAlreadyExistsException;
-import pl.kathelan.soap.mapper.UserMapper;
-import pl.kathelan.soap.repository.UserRepository;
+import pl.kathelan.soap.user.domain.User;
+import pl.kathelan.soap.user.exception.UserAlreadyExistsException;
+import pl.kathelan.soap.user.mapper.UserMapper;
+import pl.kathelan.soap.user.repository.UserRepository;
 
 import java.util.List;
 import java.util.Optional;

@@ -1,10 +1,10 @@
-package pl.kathelan.soap.repository;
+package pl.kathelan.soap.user.repository;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
-import pl.kathelan.soap.domain.User;
-import pl.kathelan.soap.exception.UserAlreadyExistsException;
+import pl.kathelan.soap.user.domain.User;
+import pl.kathelan.soap.user.exception.UserAlreadyExistsException;
 
 import java.util.List;
 import java.util.Map;

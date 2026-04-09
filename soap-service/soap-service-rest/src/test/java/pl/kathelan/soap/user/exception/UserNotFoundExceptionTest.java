@@ -1,4 +1,4 @@
-package pl.kathelan.soap.exception;
+package pl.kathelan.soap.user.exception;
 
 import org.junit.jupiter.api.Test;
 
