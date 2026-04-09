@@ -69,4 +69,12 @@ class AuthSseEventListenerTest {
 
         verify(registry).complete(processId);
     }
+
+    @Test
+    void onStateChanged_completesOnClosed() {
+        UUID processId = UUID.randomUUID();
+        listener.onStateChanged(new AuthProcessStateChangedEvent(processId, "user1", ProcessState.CLOSED));
+
+        verify(registry).complete(processId);
+    }
 }

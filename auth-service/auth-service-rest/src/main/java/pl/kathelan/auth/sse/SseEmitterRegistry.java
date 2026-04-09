@@ -29,7 +29,7 @@ public class SseEmitterRegistry {
         if (emitter == null) return;
         try {
             emitter.send(SseEmitter.event().name("state").data(event));
-        } catch (IOException e) {
+        } catch (IOException | IllegalStateException e) {
             log.warn("Failed to send SSE event for process {}: {}", processId, e.getMessage());
             emitters.remove(processId);
         }

@@ -17,6 +17,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import pl.kathelan.auth.api.dto.AuthMethod;
 import pl.kathelan.auth.api.dto.InitProcessRequest;
 import pl.kathelan.auth.domain.repository.InMemoryAuthProcessRepository;
+import pl.kathelan.auth.service.AuthProcessSchedulerService;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -56,6 +57,9 @@ class MobilePushContractTest {
 
     @Autowired
     private InMemoryAuthProcessRepository repository;
+
+    @Autowired
+    private AuthProcessSchedulerService schedulerService;
 
     @BeforeEach
     void reset() {
@@ -108,7 +112,7 @@ class MobilePushContractTest {
 
     @Test
     void getPushStatus_sendsCorrectSoapRequestAndParsesResponse() throws Exception {
-        // First: init to create a process with deliveryId
+        // Step 1: stub sendPush + init process → creates process with deliveryId=delivery-contract-1
         wm.stubFor(post(urlEqualTo("/ws"))
                 .withRequestBody(containing("sendPushRequest"))
                 .willReturn(aResponse()
@@ -121,20 +125,20 @@ class MobilePushContractTest {
                 .exchange()
                 .expectStatus().isCreated();
 
-        // Then: stub getPushStatus
+        // Step 2: stub getPushStatus response
         wm.stubFor(post(urlEqualTo("/ws"))
                 .withRequestBody(containing("getPushStatusRequest"))
                 .willReturn(aResponse()
                         .withHeader("Content-Type", "text/xml;charset=UTF-8")
                         .withBody(loadXml("contract/get-push-status-approved-response.xml"))));
 
-        // Trigger scheduler poll
-        repository.findAllPending().forEach(process -> {
-            webTestClient.post().uri("/ws").exchange(); // no-op, just documenting
-        });
+        // Step 3: trigger scheduler — causes actual SOAP getPushStatus call through WebServiceTemplate
+        schedulerService.pollAndUpdatePushStatuses();
 
+        // Step 4: verify correct SOAP envelope was sent with the deliveryId from the process
         wm.verify(postRequestedFor(urlEqualTo("/ws"))
-                .withRequestBody(containing("sendPushRequest")));
+                .withRequestBody(containing("getPushStatusRequest"))
+                .withRequestBody(WireMock.matchingXPath("//*[local-name()='deliveryId' and text()='delivery-contract-1']")));
     }
 
     @Test

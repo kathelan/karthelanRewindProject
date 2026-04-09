@@ -39,6 +39,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
@@ -156,7 +157,7 @@ class AuthProcessServiceSchedulerTest {
         service.pollAndUpdatePushStatuses();
 
         assertThat(service.getStatus(UUID.fromString(init.processId())).state()).isEqualTo(ProcessState.PENDING);
-        verify(eventPublisher, never()).publishEvent(anyString());
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     // --- expireOverdueProcesses ---
