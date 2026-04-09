@@ -8,6 +8,7 @@ import pl.kathelan.user.api.dto.CreateUserRequestDto;
 import pl.kathelan.user.api.dto.UserDto;
 import pl.kathelan.user.exception.UserAlreadyExistsException;
 import pl.kathelan.user.exception.UserNotFoundException;
+import pl.kathelan.user.exception.UserServiceException;
 
 import java.util.List;
 
@@ -54,6 +55,16 @@ class UserControllerTest extends UserServiceBaseTest {
                 .jsonPath("$.errorCode").isEqualTo("SERVICE_UNAVAILABLE");
     }
 
+    @Test
+    void getUser_returns500WhenUnknownSoapError() {
+        when(userService.getUser(any())).thenThrow(new UserServiceException("UNKNOWN_ERROR", "Unexpected upstream failure"));
+
+        doGet("/users/{id}", "any")
+                .expectStatus().isEqualTo(500)
+                .expectBody()
+                .jsonPath("$.errorCode").isEqualTo("UNKNOWN_ERROR");
+    }
+
     // --- POST /users ---
 
     @Test
@@ -85,6 +96,16 @@ class UserControllerTest extends UserServiceBaseTest {
                 .expectStatus().isBadRequest()
                 .expectBody()
                 .jsonPath("$.errorCode").isEqualTo("VALIDATION_ERROR");
+    }
+
+    @Test
+    void createUser_returns503WhenCircuitOpen() {
+        when(userService.createUser(any())).thenThrow(new CircuitOpenException("soap-service"));
+
+        doPost("/users", new CreateUserRequestDto("Jan", "Kowalski", "jan@example.com", ADDRESS))
+                .expectStatus().isEqualTo(503)
+                .expectBody()
+                .jsonPath("$.errorCode").isEqualTo("SERVICE_UNAVAILABLE");
     }
 
     // --- GET /users?city= ---

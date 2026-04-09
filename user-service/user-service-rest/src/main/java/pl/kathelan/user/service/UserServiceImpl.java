@@ -33,7 +33,9 @@ public class UserServiceImpl implements UserService {
             if (response.getErrorCode() == ErrorCode.USER_NOT_FOUND) {
                 throw new UserNotFoundException(id);
             }
-            throw new UserServiceException(response.getErrorCode().value(), response.getMessage());
+            throw new UserServiceException(
+                    response.getErrorCode() != null ? response.getErrorCode().value() : "UNKNOWN_ERROR",
+                    response.getMessage());
         }
         return mapper.toDto(response.getUser());
     }
@@ -46,7 +48,9 @@ public class UserServiceImpl implements UserService {
             if (response.getErrorCode() == ErrorCode.USER_ALREADY_EXISTS) {
                 throw new UserAlreadyExistsException(dto.email());
             }
-            throw new UserServiceException(response.getErrorCode().value(), response.getMessage());
+            throw new UserServiceException(
+                    response.getErrorCode() != null ? response.getErrorCode().value() : "UNKNOWN_ERROR",
+                    response.getMessage());
         }
         return mapper.toDto(response.getUser());
     }
@@ -55,6 +59,9 @@ public class UserServiceImpl implements UserService {
     public List<UserDto> getUsersByCity(String city) {
         log.info("getUsersByCity: city={}", city);
         GetUsersByCityResponse response = resilientCaller.call(() -> soapClient.getUsersByCity(city));
+        if (response.getUsers() == null) {
+            return List.of();
+        }
         return response.getUsers().stream().map(mapper::toDto).toList();
     }
 }

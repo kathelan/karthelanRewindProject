@@ -22,6 +22,7 @@ import pl.kathelan.user.api.dto.CreateUserRequestDto;
 import pl.kathelan.user.api.dto.UserDto;
 import pl.kathelan.user.exception.UserAlreadyExistsException;
 import pl.kathelan.user.exception.UserNotFoundException;
+import pl.kathelan.user.exception.UserServiceException;
 import pl.kathelan.user.mapper.UserRestMapper;
 
 import java.time.Duration;
@@ -88,7 +89,21 @@ class UserServiceImplTest {
         when(soapClient.getUser("missing")).thenReturn(response);
 
         assertThatThrownBy(() -> service.getUser("missing"))
-                .isInstanceOf(UserNotFoundException.class);
+                .isInstanceOf(UserNotFoundException.class)
+                .hasMessageContaining("missing");
+    }
+
+    @Test
+    void getUser_shouldThrowUserServiceException_whenUnknownErrorCode() {
+        GetUserResponse response = mock(GetUserResponse.class);
+        when(response.getUser()).thenReturn(null);
+        when(response.getErrorCode()).thenReturn(null);
+        when(response.getMessage()).thenReturn("Unexpected server error");
+        when(soapClient.getUser("id-x")).thenReturn(response);
+
+        assertThatThrownBy(() -> service.getUser("id-x"))
+                .isInstanceOf(UserServiceException.class)
+                .hasMessageContaining("Unexpected server error");
     }
 
     @Test
@@ -146,6 +161,22 @@ class UserServiceImplTest {
                 .isInstanceOf(UserAlreadyExistsException.class);
     }
 
+    @Test
+    void createUser_shouldThrowUserServiceException_whenUnknownErrorCode() {
+        CreateUserRequestDto dto = mock(CreateUserRequestDto.class);
+        CreateUserRequest soapRequest = mock(CreateUserRequest.class);
+        CreateUserResponse response = mock(CreateUserResponse.class);
+        when(mapper.toSoapRequest(dto)).thenReturn(soapRequest);
+        when(response.getUser()).thenReturn(null);
+        when(response.getErrorCode()).thenReturn(null);
+        when(response.getMessage()).thenReturn("Upstream failure");
+        when(soapClient.createUser(soapRequest)).thenReturn(response);
+
+        assertThatThrownBy(() -> service.createUser(dto))
+                .isInstanceOf(UserServiceException.class)
+                .hasMessageContaining("Upstream failure");
+    }
+
     // ===== getUsersByCity =====
 
     @Test
@@ -160,6 +191,28 @@ class UserServiceImplTest {
         List<UserDto> result = service.getUsersByCity("Warsaw");
 
         assertThat(result).containsExactly(expected);
+    }
+
+    @Test
+    void getUsersByCity_shouldReturnEmptyList_whenSoapReturnsNull() {
+        GetUsersByCityResponse response = mock(GetUsersByCityResponse.class);
+        when(response.getUsers()).thenReturn(null);
+        when(soapClient.getUsersByCity("Nowhere")).thenReturn(response);
+
+        List<UserDto> result = service.getUsersByCity("Nowhere");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void getUsersByCity_shouldReturnEmptyList_whenNoCityMatches() {
+        GetUsersByCityResponse response = mock(GetUsersByCityResponse.class);
+        when(response.getUsers()).thenReturn(List.of());
+        when(soapClient.getUsersByCity("EmptyCity")).thenReturn(response);
+
+        List<UserDto> result = service.getUsersByCity("EmptyCity");
+
+        assertThat(result).isEmpty();
     }
 
     // ===== Circuit Breaker =====

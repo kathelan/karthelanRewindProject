@@ -39,4 +39,10 @@ public class ValidationExceptionHandler {
     public ApiResponse<Void> handleCircuitOpen(CircuitOpenException ex) {
         return ApiResponse.error("SERVICE_UNAVAILABLE", ex.getMessage());
     }
+
+    @ExceptionHandler(UserServiceException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ApiResponse<Void> handleUserServiceException(UserServiceException ex) {
+        return ApiResponse.error(ex.getErrorCode(), ex.getMessage());
+    }
 }

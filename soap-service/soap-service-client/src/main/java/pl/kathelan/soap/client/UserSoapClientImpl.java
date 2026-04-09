@@ -40,7 +40,7 @@ public class UserSoapClientImpl implements UserSoapClient {
         GetUsersByCityRequest request = new GetUsersByCityRequest();
         request.setCity(city);
         GetUsersByCityResponse response = (GetUsersByCityResponse) webServiceTemplate.marshalSendAndReceive(request);
-        log.debug("getUsersByCity: found {} users", response.getUsers().size());
+        log.debug("getUsersByCity: found {} users", response.getUsers() != null ? response.getUsers().size() : 0);
         return response;
     }
 }

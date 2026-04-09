@@ -9,6 +9,8 @@ import jakarta.xml.ws.handler.MessageContext;
 import jakarta.xml.ws.handler.soap.SOAPHandler;
 import jakarta.xml.ws.handler.soap.SOAPMessageContext;
 
+import pl.kathelan.user.client.exception.WsSecurityException;
+
 import javax.xml.namespace.QName;
 import java.util.Set;
 
@@ -38,7 +40,7 @@ public class WsSecurityHandler implements SOAPHandler<SOAPMessageContext> {
             try {
                 addSecurityHeader(ctx.getMessage());
             } catch (SOAPException e) {
-                throw new RuntimeException("Failed to add WS-Security header", e);
+                throw new WsSecurityException("Failed to add WS-Security header", e);
             }
         }
         return true;

@@ -12,6 +12,7 @@ import pl.kathelan.common.resilience.retry.RetryExecutor;
 import pl.kathelan.soap.client.UserSoapClient;
 import pl.kathelan.user.exception.UserAlreadyExistsException;
 import pl.kathelan.user.exception.UserNotFoundException;
+import pl.kathelan.user.exception.UserServiceException;
 import pl.kathelan.user.mapper.UserRestMapper;
 import pl.kathelan.user.service.UserService;
 import pl.kathelan.user.service.UserServiceImpl;
@@ -45,7 +46,11 @@ public class ResilienceConfig {
 
     @Bean
     public RetryConfig soapServiceRetryConfig() {
-        return new RetryConfig(3, Duration.ofMillis(200), 2.0, Set.of(RuntimeException.class));
+        // Retry tylko na wyjątkach infrastrukturalnych — domenowe (UserNotFoundException, UserAlreadyExistsException)
+        // nie są powtarzane, bo SOAP zwrócił poprawną odpowiedź biznesową
+        return new RetryConfig(3, Duration.ofMillis(200), 2.0,
+                Set.of(RuntimeException.class),
+                Set.of(UserNotFoundException.class, UserAlreadyExistsException.class, UserServiceException.class));
     }
 
     @Bean
