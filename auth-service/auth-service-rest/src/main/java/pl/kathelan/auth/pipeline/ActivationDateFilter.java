@@ -12,7 +12,7 @@ import java.util.List;
 public class ActivationDateFilter implements DeviceProcessingStep {
 
     @Override
-    public List<DeviceDto> process(List<DeviceDto> devices, String userId) {
+    public List<DeviceDto> process(List<DeviceDto> devices, DeviceProcessingContext context) {
         LocalDateTime threshold = LocalDateTime.now().minusDays(30);
         return devices.stream()
                 .filter(d -> d.activationDate() == null || d.activationDate().isBefore(threshold))

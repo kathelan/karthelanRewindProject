@@ -3,6 +3,7 @@ package pl.kathelan.soap.client.simulator;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,12 +30,36 @@ public class SimulatorClient {
     }
 
     public void seedCapabilities(String userId, boolean active, List<String> authMethods) {
+        seedCapabilities(userId, active, "ACTIVE", authMethods, defaultActiveDevice());
+    }
+
+    public void seedCapabilities(String userId, boolean active, List<String> authMethods, List<Map<String, Object>> devices) {
+        seedCapabilities(userId, active, "ACTIVE", authMethods, devices);
+    }
+
+    public void seedCapabilities(String userId, boolean active, String accountStatus, List<String> authMethods, List<Map<String, Object>> devices) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("userId", userId);
+        body.put("active", active);
+        body.put("accountStatus", accountStatus);
+        body.put("authMethods", authMethods);
+        body.put("devices", devices);
         restClient.post()
                 .uri("/simulator/capabilities")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("userId", userId, "active", active, "authMethods", authMethods))
+                .body(body)
                 .retrieve()
                 .toBodilessEntity();
+    }
+
+    public static List<Map<String, Object>> defaultActiveDevice() {
+        Map<String, Object> device = new HashMap<>();
+        device.put("deviceId", "sim-device-001");
+        device.put("status", "ACTIVE");
+        device.put("isMainDevice", true);
+        device.put("isPassiveMode", false);
+        device.put("deviceType", "MOBILE");
+        return List.of(device);
     }
 
     public void reset() {

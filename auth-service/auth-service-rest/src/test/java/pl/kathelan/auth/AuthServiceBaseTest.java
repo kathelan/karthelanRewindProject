@@ -8,6 +8,8 @@ import pl.kathelan.common.test.BaseIntegrationTest;
 import pl.kathelan.common.util.XmlDateTimeUtils;
 import pl.kathelan.soap.client.MobilePushClient;
 import pl.kathelan.soap.push.generated.AuthMethod;
+import pl.kathelan.soap.push.generated.DeviceDto;
+import pl.kathelan.soap.push.generated.DeviceStatus;
 import pl.kathelan.soap.push.generated.GetPushStatusResponse;
 import pl.kathelan.soap.push.generated.GetUserCapabilitiesResponse;
 import pl.kathelan.soap.push.generated.PushStatus;
@@ -15,6 +17,7 @@ import pl.kathelan.soap.push.generated.SendPushResponse;
 import pl.kathelan.soap.push.generated.SendStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -60,6 +63,18 @@ public abstract class AuthServiceBaseTest extends BaseIntegrationTest {
         for (AuthMethod method : methods) {
             response.getAuthMethods().add(method);
         }
+        response.getDevices().addAll(defaultActiveDevices());
         when(mobilePushClient.getUserCapabilities(userId)).thenReturn(response);
+    }
+
+    private List<DeviceDto> defaultActiveDevices() {
+        DeviceDto device = new DeviceDto();
+        device.setDeviceId("test-device-001");
+        device.setStatus(DeviceStatus.ACTIVE);
+        device.setIsMainDevice(true);
+        device.setIsPassiveMode(false);
+        device.setActivationDate(XmlDateTimeUtils.toXmlGregorianCalendar(LocalDateTime.now().minusDays(60)));
+        device.setDeviceType("MOBILE");
+        return List.of(device);
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import pl.kathelan.auth.api.exception.AuthProcessNotFoundException;
 import pl.kathelan.auth.api.exception.InvalidStateTransitionException;
+import pl.kathelan.auth.exception.AccountNotEligibleException;
 import pl.kathelan.auth.exception.AllDevicesBlockedException;
 import pl.kathelan.auth.exception.NoDevicesFoundException;
 import pl.kathelan.common.api.ApiResponse;
@@ -36,6 +37,12 @@ public class GlobalExceptionHandler {
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         return ApiResponse.error("VALIDATION_ERROR", message);
+    }
+
+    @ExceptionHandler(AccountNotEligibleException.class)
+    @ResponseStatus(HttpStatus.UNPROCESSABLE_ENTITY)
+    public ApiResponse<Void> handleAccountNotEligible(AccountNotEligibleException ex) {
+        return ApiResponse.error("ACCOUNT_NOT_ELIGIBLE", ex.getMessage());
     }
 
     @ExceptionHandler(AllDevicesBlockedException.class)

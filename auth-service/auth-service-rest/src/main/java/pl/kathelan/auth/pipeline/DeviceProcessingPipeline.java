@@ -14,10 +14,10 @@ public class DeviceProcessingPipeline {
         this.steps = steps;
     }
 
-    public List<DeviceDto> execute(List<DeviceDto> devices, String userId) {
+    public List<DeviceDto> execute(List<DeviceDto> devices, DeviceProcessingContext context) {
         var result = devices;
         for (var step : steps) {
-            result = step.process(result, userId);
+            result = step.process(result, context);
         }
         return result;
     }

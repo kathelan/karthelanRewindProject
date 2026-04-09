@@ -14,6 +14,7 @@ import pl.kathelan.auth.domain.repository.AuthProcessRepository;
 import pl.kathelan.auth.event.AuthProcessStateChangedEvent;
 import pl.kathelan.auth.mapper.AuthProcessMapper;
 import pl.kathelan.auth.mapper.CapabilitiesMapper;
+import pl.kathelan.auth.pipeline.DeviceProcessingContext;
 import pl.kathelan.auth.pipeline.DeviceProcessingPipeline;
 import pl.kathelan.common.resilience.ResilientCaller;
 import pl.kathelan.common.util.XmlDateTimeUtils;
@@ -48,10 +49,8 @@ public class AuthProcessServiceImpl implements AuthProcessService, AuthProcessSc
         log.info("getCapabilities: userId={}", userId);
         GetUserCapabilitiesResponse soap = resilientCaller.call(() -> mobilePushClient.getUserCapabilities(userId));
         CapabilitiesResponse mapped = capabilitiesMapper.toCapabilitiesResponse(soap);
-        if (mapped.devices().isEmpty()) {
-            return mapped;
-        }
-        List<DeviceDto> filteredDevices = deviceProcessingPipeline.execute(mapped.devices(), userId);
+        DeviceProcessingContext context = new DeviceProcessingContext(userId, mapped.accountStatus());
+        List<DeviceDto> filteredDevices = deviceProcessingPipeline.execute(mapped.devices(), context);
         return new CapabilitiesResponse(mapped.userId(), mapped.active(), mapped.accountStatus(), mapped.authMethods(), filteredDevices);
     }
 

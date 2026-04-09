@@ -24,7 +24,9 @@ public class CapabilitiesMapper {
                 .map(s -> AccountStatus.valueOf(s.value()))
                 .orElse(null);
 
-        List<DeviceDto> devices = soap.getDevices().stream()
+        List<DeviceDto> devices = Optional.ofNullable(soap.getDevices())
+                .orElse(List.of())
+                .stream()
                 .map(this::toDeviceDto)
                 .toList();
 

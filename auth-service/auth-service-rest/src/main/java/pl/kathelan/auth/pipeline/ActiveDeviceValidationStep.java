@@ -14,7 +14,7 @@ import java.util.List;
 public class ActiveDeviceValidationStep implements DeviceProcessingStep {
 
     @Override
-    public List<DeviceDto> process(List<DeviceDto> devices, String userId) {
+    public List<DeviceDto> process(List<DeviceDto> devices, DeviceProcessingContext context) {
         List<DeviceDto> filtered = devices.stream()
                 .filter(d -> d.status() == DeviceStatus.ACTIVE)
                 .toList();
@@ -25,9 +25,9 @@ public class ActiveDeviceValidationStep implements DeviceProcessingStep {
 
         boolean hasBlocked = devices.stream().anyMatch(d -> d.status() == DeviceStatus.BLOCKED);
         if (hasBlocked) {
-            throw new AllDevicesBlockedException(userId);
+            throw new AllDevicesBlockedException(context.userId());
         }
 
-        throw new NoDevicesFoundException(userId);
+        throw new NoDevicesFoundException(context.userId());
     }
 }

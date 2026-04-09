@@ -4,6 +4,13 @@
       <ns2:userId>user-contract</ns2:userId>
       <ns2:active>true</ns2:active>
       <ns2:authMethods>PUSH</ns2:authMethods>
+      <ns2:devices>
+        <ns2:deviceId>contract-device-001</ns2:deviceId>
+        <ns2:status>ACTIVE</ns2:status>
+        <ns2:isMainDevice>true</ns2:isMainDevice>
+        <ns2:isPassiveMode>false</ns2:isPassiveMode>
+        <ns2:deviceType>MOBILE</ns2:deviceType>
+      </ns2:devices>
     </ns2:getUserCapabilitiesResponse>
   </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>

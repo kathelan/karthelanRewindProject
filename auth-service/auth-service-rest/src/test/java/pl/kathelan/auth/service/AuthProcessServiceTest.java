@@ -8,6 +8,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import pl.kathelan.auth.api.dto.AuthMethod;
 import pl.kathelan.auth.mapper.CapabilitiesMapper;
+import pl.kathelan.auth.exception.NoDevicesFoundException;
+import pl.kathelan.auth.pipeline.AccountStatusValidationStep;
 import pl.kathelan.auth.pipeline.ActiveDeviceValidationStep;
 import pl.kathelan.auth.pipeline.ActivationDateFilter;
 import pl.kathelan.auth.pipeline.DeviceProcessingPipeline;
@@ -28,6 +30,8 @@ import pl.kathelan.auth.api.exception.InvalidStateTransitionException;
 import pl.kathelan.auth.domain.AuthProcess;
 import pl.kathelan.auth.domain.repository.InMemoryAuthProcessRepository;
 import pl.kathelan.soap.client.MobilePushClient;
+import pl.kathelan.soap.push.generated.DeviceDto;
+import pl.kathelan.soap.push.generated.DeviceStatus;
 import pl.kathelan.soap.push.generated.GetUserCapabilitiesResponse;
 import pl.kathelan.soap.push.generated.SendPushResponse;
 import pl.kathelan.soap.push.generated.SendStatus;
@@ -66,7 +70,7 @@ class AuthProcessServiceTest {
                 cb, new RetryExecutor(), new RetryConfig(2, Duration.ZERO, 1.0, Set.of(RuntimeException.class))
         );
         DeviceProcessingPipeline pipeline = new DeviceProcessingPipeline(
-                List.of(new ActiveDeviceValidationStep(), new PassiveModeFilter(), new ActivationDateFilter())
+                List.of(new AccountStatusValidationStep(), new ActiveDeviceValidationStep(), new PassiveModeFilter(), new ActivationDateFilter())
         );
         service = new AuthProcessServiceImpl(new InMemoryAuthProcessRepository(), mobilePushClient, resilientCaller, eventPublisher, pipeline, new CapabilitiesMapper());
     }
@@ -74,12 +78,12 @@ class AuthProcessServiceTest {
     // --- getCapabilities ---
 
     @Test
-    void getCapabilitiesReturnsActiveUserWithMethods() {
+    void getCapabilitiesReturnsActiveUserWithMethodsAndActiveDevice() {
         GetUserCapabilitiesResponse soapResponse = new GetUserCapabilitiesResponse();
         soapResponse.setUserId("user1");
         soapResponse.setActive(true);
         soapResponse.getAuthMethods().add(pl.kathelan.soap.push.generated.AuthMethod.PUSH);
-        // accountStatus is null → returns null-accountStatus path with empty lists
+        soapResponse.getDevices().add(activeDevice("d1"));
         when(mobilePushClient.getUserCapabilities("user1")).thenReturn(soapResponse);
 
         CapabilitiesResponse result = service.getCapabilities("user1");
@@ -88,7 +92,21 @@ class AuthProcessServiceTest {
         assertThat(result.active()).isTrue();
         assertThat(result.accountStatus()).isNull();
         assertThat(result.authMethods()).containsExactly(pl.kathelan.auth.api.dto.AuthMethod.PUSH);
-        assertThat(result.devices()).isEmpty();
+        assertThat(result.devices()).hasSize(1);
+        assertThat(result.devices().get(0).deviceId()).isEqualTo("d1");
+    }
+
+    @Test
+    void getCapabilitiesThrowsNoDevicesFoundWhenSoapReturnsEmpty() {
+        GetUserCapabilitiesResponse soapResponse = new GetUserCapabilitiesResponse();
+        soapResponse.setUserId("user1");
+        soapResponse.setActive(true);
+        soapResponse.getAuthMethods().add(pl.kathelan.soap.push.generated.AuthMethod.PUSH);
+        when(mobilePushClient.getUserCapabilities("user1")).thenReturn(soapResponse);
+
+        assertThatThrownBy(() -> service.getCapabilities("user1"))
+                .isInstanceOf(NoDevicesFoundException.class)
+                .hasMessageContaining("user1");
     }
 
     // --- initProcess ---
@@ -174,6 +192,16 @@ class AuthProcessServiceTest {
     }
 
     // --- helpers ---
+
+    private DeviceDto activeDevice(String deviceId) {
+        DeviceDto d = new DeviceDto();
+        d.setDeviceId(deviceId);
+        d.setStatus(DeviceStatus.ACTIVE);
+        d.setIsMainDevice(true);
+        d.setIsPassiveMode(false);
+        d.setDeviceType("MOBILE");
+        return d;
+    }
 
     private void stubSendPush(String deliveryId) {
         SendPushResponse response = new SendPushResponse();

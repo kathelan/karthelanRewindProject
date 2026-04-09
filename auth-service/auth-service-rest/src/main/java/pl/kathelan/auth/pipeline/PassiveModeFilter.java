@@ -11,7 +11,7 @@ import java.util.List;
 public class PassiveModeFilter implements DeviceProcessingStep {
 
     @Override
-    public List<DeviceDto> process(List<DeviceDto> devices, String userId) {
+    public List<DeviceDto> process(List<DeviceDto> devices, DeviceProcessingContext context) {
         return devices.stream()
                 .filter(d -> !d.isPassiveMode())
                 .toList();
