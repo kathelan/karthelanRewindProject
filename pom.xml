@@ -24,7 +24,6 @@
         <module>auth-service</module>
         <module>db-performance</module>
         <module>mapstruct-service</module>
-        <module>functional-service</module>
     </modules>
 
     <properties>
