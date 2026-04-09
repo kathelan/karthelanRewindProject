@@ -1,0 +1,15 @@
+<ns2:getUserCapabilitiesResponse xmlns:ns2="http://kathelan.pl/soap/push">
+  <ns2:userId>user-fixture</ns2:userId>
+  <ns2:active>true</ns2:active>
+  <ns2:accountStatus>ACTIVE</ns2:accountStatus>
+  <ns2:authMethods>PUSH</ns2:authMethods>
+  <ns2:authMethods>SMS</ns2:authMethods>
+  <ns2:devices>
+    <ns2:deviceId>fixture-device-001</ns2:deviceId>
+    <ns2:status>ACTIVE</ns2:status>
+    <ns2:isMainDevice>true</ns2:isMainDevice>
+    <ns2:isPassiveMode>false</ns2:isPassiveMode>
+    <ns2:activationDate>2025-12-01T10:00:00</ns2:activationDate>
+    <ns2:deviceType>MOBILE</ns2:deviceType>
+  </ns2:devices>
+</ns2:getUserCapabilitiesResponse>

@@ -16,6 +16,8 @@ import pl.kathelan.soap.push.generated.PushStatus;
 import pl.kathelan.soap.push.generated.SendPushResponse;
 import pl.kathelan.soap.push.generated.SendStatus;
 
+import jakarta.xml.bind.JAXBContext;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -65,6 +67,18 @@ public abstract class AuthServiceBaseTest extends BaseIntegrationTest {
         }
         response.getDevices().addAll(defaultActiveDevices());
         when(mobilePushClient.getUserCapabilities(userId)).thenReturn(response);
+    }
+
+    // --- XML fixture loader ---
+
+    @SuppressWarnings("unchecked")
+    protected <T> T loadFixture(String path, Class<T> clazz) throws Exception {
+        try (InputStream stream = getClass().getClassLoader().getResourceAsStream(path)) {
+            if (stream == null) {
+                throw new IllegalArgumentException("Fixture not found on classpath: " + path);
+            }
+            return (T) JAXBContext.newInstance(clazz).createUnmarshaller().unmarshal(stream);
+        }
     }
 
     private List<DeviceDto> defaultActiveDevices() {
