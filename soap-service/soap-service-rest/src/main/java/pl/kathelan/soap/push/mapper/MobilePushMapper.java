@@ -9,12 +9,10 @@ import pl.kathelan.soap.push.domain.PushStatus;
 import pl.kathelan.soap.push.domain.SendStatus;
 import pl.kathelan.soap.push.domain.UserCapabilities;
 
-import javax.xml.datatype.DatatypeConfigurationException;
-import javax.xml.datatype.DatatypeFactory;
+import pl.kathelan.common.util.XmlDateTimeUtils;
+
 import javax.xml.datatype.XMLGregorianCalendar;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.GregorianCalendar;
 import java.util.Optional;
 
 @Component
@@ -73,11 +71,6 @@ public class MobilePushMapper {
     }
 
     public XMLGregorianCalendar toXmlDateTime(LocalDateTime dt) {
-        try {
-            GregorianCalendar gc = GregorianCalendar.from(dt.atZone(ZoneId.systemDefault()));
-            return DatatypeFactory.newInstance().newXMLGregorianCalendar(gc);
-        } catch (DatatypeConfigurationException e) {
-            throw new IllegalStateException("Cannot create XMLGregorianCalendar", e);
-        }
+        return XmlDateTimeUtils.toXmlGregorianCalendar(dt);
     }
 }

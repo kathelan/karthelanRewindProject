@@ -8,11 +8,16 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.ws.test.server.MockWebServiceClient;
 import org.springframework.xml.transform.StringSource;
+import pl.kathelan.soap.push.domain.AccountStatus;
+import pl.kathelan.soap.push.domain.AuthMethod;
 import pl.kathelan.soap.push.domain.PushRecord;
 import pl.kathelan.soap.push.domain.PushStatus;
+import pl.kathelan.soap.push.domain.UserCapabilities;
+import pl.kathelan.soap.push.repository.CapabilitiesRepository;
 import pl.kathelan.soap.push.repository.PushRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 import static org.springframework.ws.test.server.RequestCreators.withSoapEnvelope;
@@ -35,6 +40,9 @@ class MobilePushEndpointIntegrationTest {
     private ApplicationContext context;
 
     @Autowired
+    private CapabilitiesRepository capabilitiesRepository;
+
+    @Autowired
     private PushRepository pushRepository;
 
     private MockWebServiceClient client;
@@ -42,6 +50,33 @@ class MobilePushEndpointIntegrationTest {
     @BeforeEach
     void setUp() {
         client = MockWebServiceClient.createClient(context);
+        seedCapabilities();
+    }
+
+    private void seedCapabilities() {
+        capabilitiesRepository.save(UserCapabilities.builder()
+                .userId("user-push")
+                .active(true)
+                .accountStatus(AccountStatus.ACTIVE)
+                .authMethods(List.of(AuthMethod.PUSH))
+                .devices(List.of())
+                .build());
+
+        capabilitiesRepository.save(UserCapabilities.builder()
+                .userId("user-multi")
+                .active(true)
+                .accountStatus(AccountStatus.ACTIVE)
+                .authMethods(List.of(AuthMethod.PUSH, AuthMethod.SMS))
+                .devices(List.of())
+                .build());
+
+        capabilitiesRepository.save(UserCapabilities.builder()
+                .userId("user-inactive")
+                .active(false)
+                .accountStatus(AccountStatus.SUSPENDED)
+                .authMethods(List.of(AuthMethod.PUSH))
+                .devices(List.of())
+                .build());
     }
 
     // ===== getUserCapabilities =====
