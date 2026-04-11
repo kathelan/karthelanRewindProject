@@ -2,6 +2,7 @@ package pl.kathelan.common.resilience.retry;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -151,6 +152,24 @@ class RetryExecutorTest {
 
             assertThat(attempts.get()).isEqualTo(3);
         }
+
+        @Test
+        @DisplayName("nie ponawia gdy wyjątek jest na liście excludeOn — nawet jeśli pasuje do retryOn")
+        void doesNotRetryWhenExceptionIsExcluded() {
+            AtomicInteger attempts = new AtomicInteger(0);
+            // retryOn: wszystkie RuntimeException, ale excludeOn: IllegalArgumentException ma priorytet
+            RetryConfig config = new RetryConfig(3, Duration.ZERO, 1.0,
+                    Set.of(RuntimeException.class),
+                    Set.of(IllegalArgumentException.class));
+
+            assertThatThrownBy(() -> executor.execute(() -> {
+                attempts.incrementAndGet();
+                throw new IllegalArgumentException("błąd walidacji — nie retry");
+            }, config)).isInstanceOf(IllegalArgumentException.class);
+
+            // excludeOn ma priorytet — tylko 1 próba, brak retry
+            assertThat(attempts.get()).isEqualTo(1);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -199,9 +218,11 @@ class RetryExecutorTest {
         }
 
         @Test
+        @Tag("slow")
         @DisplayName("naprawdę blokuje wątek podczas oczekiwania (nie tylko rejestruje)")
         void actuallyBlocksThreadDuringSleep() {
-            // Prawdziwy executor (nie tracking) — weryfikuje że Thread.sleep jest wywoływany
+            // Prawdziwy executor (nie tracking) — weryfikuje że Thread.sleep jest wywoływany.
+            // @Tag("slow") bo mierzy realny czas — może być niestabilny pod obciążeniem CI.
             RetryConfig config = new RetryConfig(3, Duration.ofMillis(50), 2.0, Set.of());
 
             long start = System.currentTimeMillis();

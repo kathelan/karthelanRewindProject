@@ -35,11 +35,8 @@ class XmlDateTimeUtilsTest {
 
             LocalDateTime result = XmlDateTimeUtils.toLocalDateTime(xmlCal);
 
-            assertThat(result.getYear()).isEqualTo(2025);
-            assertThat(result.getMonth()).isEqualTo(original.getMonth());
-            assertThat(result.getDayOfMonth()).isEqualTo(15);
-            assertThat(result.getHour()).isEqualTo(12);
-            assertThat(result.getMinute()).isEqualTo(30);
+            // withNano(0) bo XMLGregorianCalendar nie przechowuje nanosekund
+            assertThat(result.withNano(0)).isEqualTo(original);
         }
 
         @Test

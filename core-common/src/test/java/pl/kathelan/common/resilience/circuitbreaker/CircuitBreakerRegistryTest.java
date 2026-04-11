@@ -37,11 +37,13 @@ class CircuitBreakerRegistryTest {
     class GettingCircuitBreakers {
 
         @Test
-        @DisplayName("tworzy nowy CB gdy serwis pojawia się po raz pierwszy")
+        @DisplayName("tworzy nowy CB w stanie CLOSED gdy serwis pojawia się po raz pierwszy")
         void createsNewCbForUnknownService() {
             CircuitBreaker cb = registry.getOrCreate("soap-service", config);
 
+            // Nowy CB musi być gotowy do działania (CLOSED) i przyjmować wywołania
             assertThat(cb).isNotNull();
+            assertThat(cb.execute(() -> "ok")).isEqualTo("ok");
         }
 
         @Test

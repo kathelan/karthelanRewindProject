@@ -9,6 +9,19 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+/**
+ * Bazowa klasa dla testów integracyjnych serwisów REST.
+ *
+ * Uruchamia pełny kontekst Spring Boot na losowym porcie i konfiguruje WebTestClient
+ * do wysyłania żądań HTTP w testach. Wszystkie klasy testujące endpointy REST
+ * powinny dziedziczyć po tej klasie zamiast duplikować adnotacje.
+ *
+ * Profil "local" — aktywuje repozytoria in-memory (bez bazy danych).
+ * Credentiale soap.client.* są wymagane przez konfigurację klienta SOAP
+ * nawet gdy w testach nie wywołujemy prawdziwego SOAP (zastępujemy go mockiem).
+ *
+ * Dostępne metody pomocnicze: doGet, doPost, doPatch, doPut, doDelete, doGetSse.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
 @ActiveProfiles("local")
