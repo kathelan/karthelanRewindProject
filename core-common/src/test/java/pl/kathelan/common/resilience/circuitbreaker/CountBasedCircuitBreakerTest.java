@@ -7,6 +7,7 @@ import pl.kathelan.common.resilience.exception.CircuitOpenException;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -110,6 +111,21 @@ class CountBasedCircuitBreakerTest {
     }
 
     // ===== OPEN → HALF_OPEN =====
+
+    @Test
+    void shouldSaveHalfOpenStateInRepositoryBeforeProbe() {
+        // Weryfikuje że save(HALF_OPEN) faktycznie nastąpił — obserwujemy stan podczas probe
+        triggerFailures(THRESHOLD);
+        forceOpenedAt(Instant.now().minus(Duration.ofSeconds(11)));
+
+        AtomicReference<State> stateDuringProbe = new AtomicReference<>();
+        cb.execute(() -> {
+            stateDuringProbe.set(repository.getOrInit(SERVICE).state());
+            return "ok";
+        });
+
+        assertThat(stateDuringProbe.get()).isEqualTo(State.HALF_OPEN);
+    }
 
     @Test
     void shouldTransitionToHalfOpenAfterTimeout() {

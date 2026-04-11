@@ -3,6 +3,8 @@ package pl.kathelan.common.resilience.retry;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -12,6 +14,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class RetryExecutorTest {
 
     private final RetryExecutor executor = new RetryExecutor();
+
+    /** Subklasa do śledzenia wywołań sleep bez realnego opóźnienia. */
+    private static class TrackingRetryExecutor extends RetryExecutor {
+        final List<Long> sleepDurations = new ArrayList<>();
+
+        @Override
+        protected void sleep(long ms) {
+            sleepDurations.add(ms);
+        }
+    }
 
     // ===== sukces =====
 
@@ -97,37 +109,53 @@ class RetryExecutorTest {
         assertThat(attempts.get()).isEqualTo(3);
     }
 
-    // ===== exponential backoff =====
+    // ===== exponential backoff — tracking (logika wywołań) =====
 
     @Test
     void shouldApplyExponentialBackoff() {
-        AtomicInteger attempts = new AtomicInteger(0);
+        TrackingRetryExecutor tracking = new TrackingRetryExecutor();
         RetryConfig config = new RetryConfig(3, Duration.ofMillis(50), 2.0, Set.of());
 
-        long start = System.currentTimeMillis();
-        assertThatThrownBy(() -> executor.execute(() -> {
-            attempts.incrementAndGet();
-            throw new RuntimeException();
-        }, config));
-        long elapsed = System.currentTimeMillis() - start;
+        assertThatThrownBy(() -> tracking.execute(() -> { throw new RuntimeException(); }, config));
 
-        // 50ms + 100ms = 150ms minimalny oczekiwany czas
-        assertThat(elapsed).isGreaterThanOrEqualTo(150);
+        // 3 próby → 2 sny: 50ms, 100ms
+        assertThat(tracking.sleepDurations).containsExactly(50L, 100L);
     }
 
     @Test
-    void shouldSleepExactlyBetweenAttemptsNotAfterLast() {
-        // 3 próby, stały delay 100ms (multiplier=1.0):
-        // poprawnie:               2 sny = ~200ms
-        // mutant (sleep po ostatniej też): 3 sny = ~300ms  → fail < 280
-        // mutant (sleep tylko na ostatniej): 1 sen = ~100ms → fail >= 200
-        RetryConfig config = new RetryConfig(3, Duration.ofMillis(100), 1.0, Set.of());
+    void shouldSleepOnlyBetweenAttemptsNotAfterLast() {
+        TrackingRetryExecutor tracking = new TrackingRetryExecutor();
+        RetryConfig config = new RetryConfig(4, Duration.ofMillis(10), 1.0, Set.of());
+
+        assertThatThrownBy(() -> tracking.execute(() -> { throw new RuntimeException(); }, config));
+
+        // 4 próby → dokładnie 3 sny (nie 4)
+        assertThat(tracking.sleepDurations).hasSize(3);
+    }
+
+    @Test
+    void shouldPassZeroDurationToSleepWithoutSleeping() {
+        TrackingRetryExecutor tracking = new TrackingRetryExecutor();
+        RetryConfig config = new RetryConfig(3, Duration.ZERO, 1.0, Set.of());
+
+        assertThatThrownBy(() -> tracking.execute(() -> { throw new RuntimeException(); }, config));
+
+        assertThat(tracking.sleepDurations).hasSize(2).containsOnly(0L);
+    }
+
+    // ===== exponential backoff — timing (realny sleep, weryfikuje sleep body) =====
+
+    @Test
+    void shouldActuallyDelayBetweenRetries() {
+        // Prawdziwy executor — weryfikuje że Thread.sleep faktycznie blokuje (nie tylko rejestruje)
+        // Zabija mutację: negacja warunku w sleep (ms > 0 zamiast ms <= 0 → pomija real sleep)
+        RetryConfig config = new RetryConfig(3, Duration.ofMillis(50), 2.0, Set.of());
 
         long start = System.currentTimeMillis();
         assertThatThrownBy(() -> executor.execute(() -> { throw new RuntimeException(); }, config));
         long elapsed = System.currentTimeMillis() - start;
 
-        assertThat(elapsed).isGreaterThanOrEqualTo(200)
-                           .isLessThan(280);
+        // 50ms + 100ms = 150ms — jeśli sleep pominięty, elapsed << 150ms
+        assertThat(elapsed).isGreaterThanOrEqualTo(150);
     }
 }

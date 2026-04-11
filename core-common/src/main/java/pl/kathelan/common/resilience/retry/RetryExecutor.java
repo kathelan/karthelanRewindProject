@@ -40,7 +40,7 @@ public class RetryExecutor {
         throw rethrow(lastException);
     }
 
-    private void sleep(long ms) {
+    protected void sleep(long ms) {
         if (ms <= 0) return;
         try {
             Thread.sleep(ms);
