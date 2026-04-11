@@ -1,6 +1,8 @@
 package pl.kathelan.common.resilience.circuitbreaker;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import pl.kathelan.common.resilience.exception.CircuitOpenException;
@@ -14,9 +16,23 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+/**
+ * Circuit Breaker (wyłącznik automatyczny) — chroni system przed kaskadowymi awariami.
+ *
+ * Działa jak bezpiecznik elektryczny: gdy serwis zdalny przestaje odpowiadać,
+ * CB "otwiera" się i odrzuca kolejne wywołania zamiast czekać na timeout.
+ * Po upływie czasu daje serwisowi szansę wrócić do działania ("probe").
+ *
+ * Stany:
+ *   CLOSED   → normalne działanie, zlicza błędy
+ *   OPEN     → odrzuca wszystkie wywołania natychmiast (bez czekania)
+ *   HALF_OPEN → przepuszcza jedno wywołanie testowe (probe) żeby sprawdzić czy serwis wrócił
+ */
+@DisplayName("CountBasedCircuitBreaker")
 class CountBasedCircuitBreakerTest {
 
     private static final String SERVICE = "soap-service";
+    // Próg błędów po którym CB się otwiera
     private static final int THRESHOLD = 3;
 
     private InMemoryCircuitBreakerStateRepository repository;
@@ -26,163 +42,224 @@ class CountBasedCircuitBreakerTest {
     @BeforeEach
     void setUp() {
         repository = Mockito.spy(new InMemoryCircuitBreakerStateRepository());
+        // Konfiguracja: otwórz po 3 błędach, czekaj 10s przed próbą powrotu, każdy wyjątek to błąd
         config = new CircuitBreakerConfig(THRESHOLD, Duration.ofSeconds(10), e -> true);
         cb = new CountBasedCircuitBreaker(SERVICE, config, repository);
     }
 
-    // ===== CLOSED state =====
+    // ─────────────────────────────────────────────────────────────────────────
+    // Stan CLOSED — normalny ruch, CB nie przeszkadza
+    // ─────────────────────────────────────────────────────────────────────────
 
-    @Test
-    void shouldExecuteCallWhenClosed() {
-        String result = cb.execute(() -> "ok");
+    @Nested
+    @DisplayName("Stan CLOSED (zamknięty) — CB przepuszcza wywołania")
+    class WhenClosed {
 
-        assertThat(result).isEqualTo("ok");
+        @Test
+        @DisplayName("zwraca wynik wywołania gdy serwis odpowiada poprawnie")
+        void returnsResultWhenCallSucceeds() {
+            String result = cb.execute(() -> "odpowiedź serwisu");
+
+            assertThat(result).isEqualTo("odpowiedź serwisu");
+        }
+
+        @Test
+        @DisplayName("nie liczy udanych wywołań jako błędy")
+        void doesNotCountSuccessAsFailure() {
+            cb.execute(() -> "ok");
+            cb.execute(() -> "ok");
+
+            assertThat(repository.getOrInit(SERVICE).failureCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("nie zapisuje stanu gdy nie ma żadnych błędów (optymalizacja)")
+        void doesNotSaveStateOnCleanSuccess() {
+            cb.execute(() -> "ok");
+
+            verify(repository, never()).save(Mockito.eq(SERVICE), Mockito.any());
+        }
+
+        @Test
+        @DisplayName("zlicza wyjątek jako jeden błąd")
+        void countsExceptionAsOneFailure() {
+            assertThatThrownBy(() -> cb.execute(() -> { throw new RuntimeException("serwis nie odpowiada"); }))
+                    .isInstanceOf(RuntimeException.class);
+
+            assertThat(repository.getOrInit(SERVICE).failureCount()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("resetuje licznik błędów po udanym wywołaniu")
+        void resetsFailureCountAfterSuccess() {
+            // Dwa błędy pod rząd...
+            assertThatThrownBy(() -> cb.execute(() -> { throw new RuntimeException(); }));
+            assertThatThrownBy(() -> cb.execute(() -> { throw new RuntimeException(); }));
+
+            // ...ale serwis wraca — licznik powinien być wyzerowany
+            cb.execute(() -> "wrócił");
+
+            assertThat(repository.getOrInit(SERVICE).failureCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("nie otwiera się dopóki liczba błędów nie przekroczy progu")
+        void staysClosedBeforeThreshold() {
+            triggerFailures(THRESHOLD - 1); // jeden mniej niż próg
+
+            assertThat(repository.getOrInit(SERVICE).state()).isEqualTo(State.CLOSED);
+        }
     }
 
-    @Test
-    void shouldNotCountSuccessAsFailure() {
-        cb.execute(() -> "ok");
-        cb.execute(() -> "ok");
+    // ─────────────────────────────────────────────────────────────────────────
+    // Przejście CLOSED → OPEN: próg błędów osiągnięty
+    // ─────────────────────────────────────────────────────────────────────────
 
-        assertThat(repository.getOrInit(SERVICE).failureCount()).isZero();
+    @Nested
+    @DisplayName("Przejście CLOSED → OPEN — po osiągnięciu progu błędów")
+    class WhenThresholdReached {
+
+        @Test
+        @DisplayName("otwiera się dokładnie po osiągnięciu progu")
+        void opensAfterReachingThreshold() {
+            triggerFailures(THRESHOLD);
+
+            assertThat(repository.getOrInit(SERVICE).state()).isEqualTo(State.OPEN);
+        }
+
+        @Test
+        @DisplayName("nie zlicza błędów odrzuconych wywołań — tylko realne błędy")
+        void doesNotCountRejectedCallsAsFailures() {
+            triggerFailures(THRESHOLD); // CB otwiera się
+            int failuresAtOpen = repository.getOrInit(SERVICE).failureCount();
+
+            // Wywołanie odrzucone przez OPEN CB — nie powinno zwiększyć licznika
+            assertThatThrownBy(() -> cb.execute(() -> "ok")).isInstanceOf(CircuitOpenException.class);
+
+            assertThat(repository.getOrInit(SERVICE).failureCount()).isEqualTo(failuresAtOpen);
+        }
     }
 
-    @Test
-    void shouldNotSaveStateOnSuccessWhenNoFailures() {
-        // failureCount == 0 → zbędny save nie powinien nastąpić (boundary: > 0 vs >= 0)
-        cb.execute(() -> "ok");
+    // ─────────────────────────────────────────────────────────────────────────
+    // Stan OPEN — CB "wyłącznik" jest otwarty, odrzuca natychmiast
+    // ─────────────────────────────────────────────────────────────────────────
 
-        verify(repository, never()).save(Mockito.eq(SERVICE), Mockito.any());
+    @Nested
+    @DisplayName("Stan OPEN (otwarty) — CB odrzuca wywołania bez wykonania")
+    class WhenOpen {
+
+        @Test
+        @DisplayName("rzuca CircuitOpenException zamiast wołać serwis")
+        void rejectsCallWithCircuitOpenException() {
+            triggerFailures(THRESHOLD);
+
+            assertThatThrownBy(() -> cb.execute(() -> "nigdy nie zostanie wywołane"))
+                    .isInstanceOf(CircuitOpenException.class)
+                    .hasMessageContaining(SERVICE);
+        }
     }
 
-    @Test
-    void shouldCountFailureWhenExceptionThrown() {
-        assertThatThrownBy(() -> cb.execute(() -> { throw new RuntimeException("down"); }))
-                .isInstanceOf(RuntimeException.class);
+    // ─────────────────────────────────────────────────────────────────────────
+    // Przejście OPEN → HALF_OPEN: timeout minął, dajemy serwisowi szansę
+    // ─────────────────────────────────────────────────────────────────────────
 
-        assertThat(repository.getOrInit(SERVICE).failureCount()).isEqualTo(1);
+    @Nested
+    @DisplayName("Przejście OPEN → HALF_OPEN — po upływie czasu oczekiwania")
+    class WhenTimeoutElapsed {
+
+        @Test
+        @DisplayName("zapisuje stan HALF_OPEN w repozytorium zanim puści probe")
+        void savesHalfOpenStateBeforeProbe() {
+            triggerFailures(THRESHOLD);
+            // Symulujemy że minął czas oczekiwania (11s > skonfigurowane 10s)
+            forceOpenedAt(Instant.now().minus(Duration.ofSeconds(11)));
+
+            AtomicReference<State> statePodczasProbe = new AtomicReference<>();
+            cb.execute(() -> {
+                // Sprawdzamy stan podczas wykonywania probe — musi być HALF_OPEN
+                statePodczasProbe.set(repository.getOrInit(SERVICE).state());
+                return "ok";
+            });
+
+            assertThat(statePodczasProbe.get()).isEqualTo(State.HALF_OPEN);
+        }
+
+        @Test
+        @DisplayName("przepuszcza jedno wywołanie testowe (probe) i zamyka CB gdy serwis odpowiada")
+        void allowsProbeCallAndClosesOnSuccess() {
+            triggerFailures(THRESHOLD);
+            forceOpenedAt(Instant.now().minus(Duration.ofSeconds(11)));
+
+            String result = cb.execute(() -> "serwis wrócił");
+
+            assertThat(result).isEqualTo("serwis wrócił");
+            assertThat(repository.getOrInit(SERVICE).state()).isEqualTo(State.CLOSED);
+        }
     }
 
-    @Test
-    void shouldResetFailureCountAfterSuccess() {
-        assertThatThrownBy(() -> cb.execute(() -> { throw new RuntimeException(); }));
-        assertThatThrownBy(() -> cb.execute(() -> { throw new RuntimeException(); }));
+    // ─────────────────────────────────────────────────────────────────────────
+    // Stan HALF_OPEN — przepuszczamy jedno wywołanie testowe
+    // ─────────────────────────────────────────────────────────────────────────
 
-        cb.execute(() -> "ok");
+    @Nested
+    @DisplayName("Stan HALF_OPEN — jedno wywołanie testowe decyduje o losie CB")
+    class WhenHalfOpen {
 
-        assertThat(repository.getOrInit(SERVICE).failureCount()).isZero();
+        @Test
+        @DisplayName("zamyka CB gdy probe zakończy się sukcesem")
+        void closesAfterSuccessfulProbe() {
+            forceState(State.HALF_OPEN);
+
+            String result = cb.execute(() -> "serwis działa");
+
+            assertThat(result).isEqualTo("serwis działa");
+            assertThat(repository.getOrInit(SERVICE).state()).isEqualTo(State.CLOSED);
+            assertThat(repository.getOrInit(SERVICE).failureCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("ponownie otwiera CB gdy probe się nie powiedzie")
+        void reopensAfterFailedProbe() {
+            forceState(State.HALF_OPEN);
+
+            assertThatThrownBy(() -> cb.execute(() -> { throw new RuntimeException("nadal nie działa"); }))
+                    .isInstanceOf(RuntimeException.class);
+
+            assertThat(repository.getOrInit(SERVICE).state()).isEqualTo(State.OPEN);
+        }
     }
 
-    // ===== CLOSED → OPEN =====
+    // ─────────────────────────────────────────────────────────────────────────
+    // FailurePredicate — nie każdy wyjątek to awaria infrastruktury
+    // ─────────────────────────────────────────────────────────────────────────
 
-    @Test
-    void shouldOpenAfterReachingFailureThreshold() {
-        triggerFailures(THRESHOLD);
+    @Nested
+    @DisplayName("FailurePredicate — filtrowanie które wyjątki liczą się jako awaria")
+    class WithFailurePredicate {
 
-        assertThat(repository.getOrInit(SERVICE).state()).isEqualTo(State.OPEN);
+        @Test
+        @DisplayName("nie liczy wyjątku jako błąd gdy predykat mówi że to błąd biznesowy")
+        void doesNotCountFailureWhenPredicateExcludes() {
+            // Konfiguracja: IllegalArgumentException to błąd biznesowy (np. walidacja), nie awaria
+            config = new CircuitBreakerConfig(THRESHOLD, Duration.ofSeconds(10),
+                    e -> !(e instanceof IllegalArgumentException));
+            cb = new CountBasedCircuitBreaker(SERVICE, config, repository);
+
+            assertThatThrownBy(() -> cb.execute(() -> { throw new IllegalArgumentException("nieprawidłowy input"); }));
+
+            // CB nie powinien liczyć tego jako awarii — serwis działa, tylko input był zły
+            assertThat(repository.getOrInit(SERVICE).failureCount()).isZero();
+        }
     }
 
-    @Test
-    void shouldNotOpenBeforeReachingThreshold() {
-        triggerFailures(THRESHOLD - 1);
-
-        assertThat(repository.getOrInit(SERVICE).state()).isEqualTo(State.CLOSED);
-    }
-
-    // ===== OPEN state =====
-
-    @Test
-    void shouldRejectCallWhenOpen() {
-        triggerFailures(THRESHOLD);
-
-        assertThatThrownBy(() -> cb.execute(() -> "ok"))
-                .isInstanceOf(CircuitOpenException.class)
-                .hasMessageContaining(SERVICE);
-    }
-
-    @Test
-    void shouldNotCountRejectedCallAsFailure() {
-        triggerFailures(THRESHOLD);
-        int failureCountAfterOpen = repository.getOrInit(SERVICE).failureCount();
-
-        assertThatThrownBy(() -> cb.execute(() -> "ok")).isInstanceOf(CircuitOpenException.class);
-
-        assertThat(repository.getOrInit(SERVICE).failureCount()).isEqualTo(failureCountAfterOpen);
-    }
-
-    // ===== OPEN → HALF_OPEN =====
-
-    @Test
-    void shouldSaveHalfOpenStateInRepositoryBeforeProbe() {
-        // Weryfikuje że save(HALF_OPEN) faktycznie nastąpił — obserwujemy stan podczas probe
-        triggerFailures(THRESHOLD);
-        forceOpenedAt(Instant.now().minus(Duration.ofSeconds(11)));
-
-        AtomicReference<State> stateDuringProbe = new AtomicReference<>();
-        cb.execute(() -> {
-            stateDuringProbe.set(repository.getOrInit(SERVICE).state());
-            return "ok";
-        });
-
-        assertThat(stateDuringProbe.get()).isEqualTo(State.HALF_OPEN);
-    }
-
-    @Test
-    void shouldTransitionToHalfOpenAfterTimeout() {
-        triggerFailures(THRESHOLD);
-        forceOpenedAt(Instant.now().minus(Duration.ofSeconds(11)));
-
-        String result = cb.execute(() -> "probe");
-
-        // przeszło bez CircuitOpenException — CB w HALF_OPEN przepuścił wywołanie
-        assertThat(result).isEqualTo("probe");
-        assertThat(repository.getOrInit(SERVICE).state()).isEqualTo(State.CLOSED);
-    }
-
-    // ===== HALF_OPEN → CLOSED =====
-
-    @Test
-    void shouldCloseAfterSuccessfulProbeInHalfOpen() {
-        forceState(State.HALF_OPEN);
-
-        String result = cb.execute(() -> "ok");
-
-        assertThat(result).isEqualTo("ok");
-        assertThat(repository.getOrInit(SERVICE).state()).isEqualTo(State.CLOSED);
-        assertThat(repository.getOrInit(SERVICE).failureCount()).isZero();
-    }
-
-    // ===== HALF_OPEN → OPEN =====
-
-    @Test
-    void shouldReopenAfterFailedProbeInHalfOpen() {
-        forceState(State.HALF_OPEN);
-
-        assertThatThrownBy(() -> cb.execute(() -> { throw new RuntimeException("still down"); }))
-                .isInstanceOf(RuntimeException.class);
-
-        assertThat(repository.getOrInit(SERVICE).state()).isEqualTo(State.OPEN);
-    }
-
-    // ===== FailurePredicate =====
-
-    @Test
-    void shouldNotCountFailureWhenPredicateSaysNo() {
-        config = new CircuitBreakerConfig(THRESHOLD, Duration.ofSeconds(10),
-                e -> !(e instanceof IllegalArgumentException));
-        cb = new CountBasedCircuitBreaker(SERVICE, config, repository);
-
-        assertThatThrownBy(() -> cb.execute(() -> { throw new IllegalArgumentException("business error"); }));
-
-        assertThat(repository.getOrInit(SERVICE).failureCount()).isZero();
-    }
-
-    // ===== helpers =====
+    // ─────────────────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────────────────
 
     private void triggerFailures(int count) {
         for (int i = 0; i < count; i++) {
             try {
-                cb.execute(() -> { throw new RuntimeException("down"); });
+                cb.execute(() -> { throw new RuntimeException("serwis nie odpowiada"); });
             } catch (Exception ignored) {}
         }
     }
