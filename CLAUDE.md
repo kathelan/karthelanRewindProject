@@ -10,14 +10,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | Moduł | Status | Opis |
 |---|---|---|
-| `core-common` | GOTOWY | Generyczne narzędzia: interceptory, walidatory, base classes |
+| `core-common` | GOTOWY | Generyczne narzędzia: interceptory, walidatory, base classes, ResilientCaller (CB + Retry) |
 | `rest-service-parent` | GOTOWY | Wspólny parent POM dla modułów *-rest |
-| `soap-service` | GOTOWY | SOAP endpoint (JAX-WS), symulator push statusów |
-| `user-service` | GOTOWY | REST CRUD użytkowników (8 testów GREEN) |
-| `auth-service` | GOTOWY | Proces autoryzacji + SSE streaming (119 testów GREEN) |
-| `db-performance` | GOTOWY | Standalone testy wydajności PostgreSQL z TestContainers |
-| `mapstruct-service` | GOTOWY | MapStruct — 59 testów GREEN (features 1-42) |
-| `functional-service` | GOTOWY | Java Functional Interfaces — 142 testy GREEN (features 1-6) |
+| `soap-service` | GOTOWY | SOAP endpoint (JAX-WS), symulator push statusów, WS-Security UsernameToken |
+| `user-service` | GOTOWY | REST CRUD użytkowników, ResilientCaller owijający SOAP client |
+| `auth-service` | GOTOWY | Proces autoryzacji + SSE streaming, device validation pipeline |
+| `db-performance` | GOTOWY | Standalone testy wydajności PostgreSQL + Oracle z TestContainers, multi-datasource |
+| `mapstruct-service` | GOTOWY | MapStruct — 65 testów GREEN (features 1-42) |
 
 ### Architektura soap-service
 
@@ -25,6 +24,25 @@ Profile Spring:
 - `local` — in-memory repozytoria (dev/testy)
 - `simulator` — `SimulatorController` REST do sterowania push statusami w testach
 - brak/default — produkcja/Docker
+
+WS-Security: message-level WSS4J UsernameToken (nie HTTP Basic) — skonfigurowane zarówno po stronie serwera (`WsSecurityConfig`) jak i klienta (`WsSecurityHandler` w `user-service-client`).
+
+### Architektura auth-service — Device Validation Pipeline
+
+`DeviceProcessingPipeline` — sekwencja kroków (`DeviceProcessingStep`):
+1. `AccountStatusValidationStep` — sprawdza czy konto aktywne
+2. `ActiveDeviceValidationStep` — filtruje urządzenia aktywne
+3. `ActivationDateFilter` — odrzuca za stare urządzenia
+4. `PassiveModeFilter` — pomija urządzenia w passive mode
+
+`SseEmitterRegistry` — `ConcurrentHashMap` emitterów per processId; lifecycle hooks: completion/timeout/error.
+
+### Architektura core-common — ResilientCaller
+
+`ResilientCaller` = Circuit Breaker owijający Retry:
+- CB liczy failure dopiero po wyczerpaniu wszystkich retries
+- `RetryConfig` — exponential backoff + `excludeOn` (lista wyjątków niepowodujących retry, np. błędy walidacji)
+- `CircuitBreakerRegistry` — globalny rejestr per klucz (np. nazwa klienta)
 
 ### Znane kompromisy (świadome)
 
@@ -203,9 +221,8 @@ karthelan-rewind/
 ├── auth-service/
 │   ├── auth-service-api/
 │   └── auth-service-rest/    # SSE, polling, ResilientCaller
-├── db-performance/           # Standalone TestContainers + PostgreSQL
-├── mapstruct-service/        # MapStruct mappers
-├── functional-service/       # Functional interfaces: Supplier/Consumer/Function/Predicate + Stream/Optional
+├── db-performance/           # Standalone TestContainers + PostgreSQL + Oracle (multi-datasource)
+├── mapstruct-service/        # MapStruct mappers (features 1-42, 65 testów)
 ├── docker-compose.yml
 └── pom.xml                   # Root POM — wersje, pluginy, dependency management
 ```
