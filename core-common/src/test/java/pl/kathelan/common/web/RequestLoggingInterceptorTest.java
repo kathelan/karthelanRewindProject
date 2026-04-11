@@ -1,12 +1,30 @@
 package pl.kathelan.common.web;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
+
+/**
+ * RequestLoggingInterceptor — Spring HandlerInterceptor logujący każde żądanie HTTP.
+ *
+ * Działa w dwóch fazach:
+ *   1. preHandle  — zapisuje timestamp startu w atrybucie requestu, loguje "→ METHOD /path"
+ *   2. afterCompletion — oblicza czas wykonania i loguje "← STATUS /path | Xms"
+ *      - status 2xx/3xx → DEBUG
+ *      - status 4xx     → WARN
+ *      - status 5xx lub wyjątek → WARN z komunikatem błędu
+ *
+ * Musi zwrócić true z preHandle — inaczej Spring zatrzyma łańcuch filtrów.
+ * Bezpieczny gdy preHandle nie zostało wywołane (brak atrybutu startu → nic nie loguje).
+ */
+@DisplayName("RequestLoggingInterceptor")
 class RequestLoggingInterceptorTest {
 
     private RequestLoggingInterceptor interceptor;
@@ -20,44 +38,62 @@ class RequestLoggingInterceptorTest {
         response = new MockHttpServletResponse();
     }
 
-    @Test
-    void preHandle_storesStartTimeInRequestAttribute() {
-        request.setMethod("POST");
-        request.setRequestURI("/process/init");
+    @Nested
+    @DisplayName("preHandle — przed wykonaniem żądania")
+    class PreHandle {
 
-        long before = System.nanoTime();
-        interceptor.preHandle(request, response, new Object());
-        long after = System.nanoTime();
+        @Test
+        @DisplayName("zapisuje timestamp startu w atrybucie requestu (potrzebny do obliczenia czasu)")
+        void storesStartTimeInRequestAttribute() {
+            request.setMethod("POST");
+            request.setRequestURI("/process/init");
 
-        Long startTime = (Long) request.getAttribute(RequestLoggingInterceptor.START_TIME_ATTR);
-        assertThat(startTime).isBetween(before, after);
+            long before = System.nanoTime();
+            interceptor.preHandle(request, response, new Object());
+            long after = System.nanoTime();
+
+            Long startTime = (Long) request.getAttribute(RequestLoggingInterceptor.START_TIME_ATTR);
+            assertThat(startTime).isBetween(before, after);
+        }
+
+        @Test
+        @DisplayName("zawsze zwraca true — żeby Spring kontynuował obsługę żądania")
+        void alwaysReturnsTrue() {
+            request.setMethod("GET");
+            request.setRequestURI("/auth/capabilities/user1");
+
+            boolean result = interceptor.preHandle(request, response, new Object());
+
+            assertThat(result).isTrue();
+        }
     }
 
-    @Test
-    void preHandle_returnsTrue() {
-        request.setMethod("GET");
-        request.setRequestURI("/auth/capabilities/user1");
+    @Nested
+    @DisplayName("afterCompletion — po wykonaniu żądania")
+    class AfterCompletion {
 
-        boolean result = interceptor.preHandle(request, response, new Object());
+        @Test
+        @DisplayName("nie rzuca wyjątku gdy preHandle nie było wywołane (brak timestampu startu)")
+        void doesNotThrowWhenStartTimeMissing() {
+            response.setStatus(200);
+            Object handler = new Object();
 
-        assertThat(result).isTrue();
-    }
+            // Scenariusz: interceptor dołączony po starcie aplikacji, preHandle pominięte
+            assertThatNoException().isThrownBy(
+                    () -> interceptor.afterCompletion(request, response, handler, null));
+        }
 
-    @Test
-    void afterCompletion_doesNotThrowWhenStartTimeMissing() {
-        response.setStatus(200);
+        @Test
+        @DisplayName("nie rzuca wyjątku gdy żądanie zakończyło się błędem 500")
+        void doesNotThrowOnServerError() {
+            request.setAttribute(RequestLoggingInterceptor.START_TIME_ATTR, System.nanoTime());
+            response.setStatus(500);
+            Object handler = new Object();
+            RuntimeException serverError = new RuntimeException("błąd serwera");
 
-        // no preHandle called — attribute missing
-        interceptor.afterCompletion(request, response, new Object(), null);
-        // no exception = pass
-    }
-
-    @Test
-    void afterCompletion_doesNotThrowOnException() {
-        request.setAttribute(RequestLoggingInterceptor.START_TIME_ATTR, System.nanoTime());
-        response.setStatus(500);
-
-        interceptor.afterCompletion(request, response, new Object(), new RuntimeException("boom"));
-        // no exception = pass
+            // Interceptor loguje błąd, ale sam nie może rzucać — zatrzymałby pipeline Spring MVC
+            assertThatNoException().isThrownBy(
+                    () -> interceptor.afterCompletion(request, response, handler, serverError));
+        }
     }
 }
