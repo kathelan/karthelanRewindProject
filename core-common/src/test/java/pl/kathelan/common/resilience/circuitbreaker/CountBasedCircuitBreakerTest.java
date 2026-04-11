@@ -2,6 +2,7 @@ package pl.kathelan.common.resilience.circuitbreaker;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import pl.kathelan.common.resilience.exception.CircuitOpenException;
 
 import java.time.Duration;
@@ -9,6 +10,8 @@ import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 class CountBasedCircuitBreakerTest {
 
@@ -21,7 +24,7 @@ class CountBasedCircuitBreakerTest {
 
     @BeforeEach
     void setUp() {
-        repository = new InMemoryCircuitBreakerStateRepository();
+        repository = Mockito.spy(new InMemoryCircuitBreakerStateRepository());
         config = new CircuitBreakerConfig(THRESHOLD, Duration.ofSeconds(10), e -> true);
         cb = new CountBasedCircuitBreaker(SERVICE, config, repository);
     }
@@ -41,6 +44,14 @@ class CountBasedCircuitBreakerTest {
         cb.execute(() -> "ok");
 
         assertThat(repository.getOrInit(SERVICE).failureCount()).isZero();
+    }
+
+    @Test
+    void shouldNotSaveStateOnSuccessWhenNoFailures() {
+        // failureCount == 0 → zbędny save nie powinien nastąpić (boundary: > 0 vs >= 0)
+        cb.execute(() -> "ok");
+
+        verify(repository, never()).save(Mockito.eq(SERVICE), Mockito.any());
     }
 
     @Test
@@ -105,9 +116,10 @@ class CountBasedCircuitBreakerTest {
         triggerFailures(THRESHOLD);
         forceOpenedAt(Instant.now().minus(Duration.ofSeconds(11)));
 
-        cb.execute(() -> "probe");
+        String result = cb.execute(() -> "probe");
 
         // przeszło bez CircuitOpenException — CB w HALF_OPEN przepuścił wywołanie
+        assertThat(result).isEqualTo("probe");
         assertThat(repository.getOrInit(SERVICE).state()).isEqualTo(State.CLOSED);
     }
 
@@ -117,8 +129,9 @@ class CountBasedCircuitBreakerTest {
     void shouldCloseAfterSuccessfulProbeInHalfOpen() {
         forceState(State.HALF_OPEN);
 
-        cb.execute(() -> "ok");
+        String result = cb.execute(() -> "ok");
 
+        assertThat(result).isEqualTo("ok");
         assertThat(repository.getOrInit(SERVICE).state()).isEqualTo(State.CLOSED);
         assertThat(repository.getOrInit(SERVICE).failureCount()).isZero();
     }

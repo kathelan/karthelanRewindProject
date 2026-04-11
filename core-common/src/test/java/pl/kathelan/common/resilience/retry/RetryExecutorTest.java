@@ -114,4 +114,20 @@ class RetryExecutorTest {
         // 50ms + 100ms = 150ms minimalny oczekiwany czas
         assertThat(elapsed).isGreaterThanOrEqualTo(150);
     }
+
+    @Test
+    void shouldSleepExactlyBetweenAttemptsNotAfterLast() {
+        // 3 próby, stały delay 100ms (multiplier=1.0):
+        // poprawnie:               2 sny = ~200ms
+        // mutant (sleep po ostatniej też): 3 sny = ~300ms  → fail < 280
+        // mutant (sleep tylko na ostatniej): 1 sen = ~100ms → fail >= 200
+        RetryConfig config = new RetryConfig(3, Duration.ofMillis(100), 1.0, Set.of());
+
+        long start = System.currentTimeMillis();
+        assertThatThrownBy(() -> executor.execute(() -> { throw new RuntimeException(); }, config));
+        long elapsed = System.currentTimeMillis() - start;
+
+        assertThat(elapsed).isGreaterThanOrEqualTo(200)
+                           .isLessThan(280);
+    }
 }

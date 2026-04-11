@@ -50,6 +50,35 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
             </plugin>
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>1.17.4</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-junit5-plugin</artifactId>
+                        <version>1.2.1</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <targetClasses>
+                        <param>pl.kathelan.common.*</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>pl.kathelan.common.*</param>
+                    </targetTests>
+                    <excludedClasses>
+                        <param>pl.kathelan.common.web.*</param>
+                        <param>pl.kathelan.common.api.*</param>
+                        <param>pl.kathelan.common.util.*</param>
+                    </excludedClasses>
+                    <outputFormats>
+                        <outputFormat>HTML</outputFormat>
+                    </outputFormats>
+                    <timestampedReports>false</timestampedReports>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
