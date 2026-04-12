@@ -1,0 +1,19 @@
+{
+  "name": "SOAP createUser — already exists",
+  "request": {
+    "method": "POST",
+    "url": "/ws",
+    "bodyPatterns": [
+      {
+        "matchesXPath": "//*[local-name()='createUserRequest']/*[local-name()='email'][text()='existing@contract.pl']"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "text/xml;charset=UTF-8"
+    },
+    "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Body><tns:createUserResponse xmlns:tns=\"http://kathelan.pl/soap/users\"><tns:errorCode>USER_ALREADY_EXISTS</tns:errorCode><tns:message>User already exists</tns:message></tns:createUserResponse></soapenv:Body></soapenv:Envelope>"
+  }
+}

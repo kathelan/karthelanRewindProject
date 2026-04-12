@@ -1,0 +1,19 @@
+{
+  "name": "SOAP getUser — user not found",
+  "request": {
+    "method": "POST",
+    "url": "/ws",
+    "bodyPatterns": [
+      {
+        "matchesXPath": "//*[local-name()='getUserRequest']/*[local-name()='id'][text()='nonexistent-id']"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "text/xml;charset=UTF-8"
+    },
+    "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Body><tns:getUserResponse xmlns:tns=\"http://kathelan.pl/soap/users\"><tns:errorCode>USER_NOT_FOUND</tns:errorCode><tns:message>User not found</tns:message></tns:getUserResponse></soapenv:Body></soapenv:Envelope>"
+  }
+}

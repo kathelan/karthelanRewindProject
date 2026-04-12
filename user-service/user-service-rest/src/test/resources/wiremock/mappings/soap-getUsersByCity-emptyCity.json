@@ -1,0 +1,19 @@
+{
+  "name": "SOAP getUsersByCity — empty city",
+  "request": {
+    "method": "POST",
+    "url": "/ws",
+    "bodyPatterns": [
+      {
+        "matchesXPath": "//*[local-name()='getUsersByCityRequest']/*[local-name()='city'][text()='EmptyCity']"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "text/xml;charset=UTF-8"
+    },
+    "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Body><tns:getUsersByCityResponse xmlns:tns=\"http://kathelan.pl/soap/users\"/></soapenv:Body></soapenv:Envelope>"
+  }
+}

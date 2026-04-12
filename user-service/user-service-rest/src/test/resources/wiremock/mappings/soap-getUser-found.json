@@ -1,0 +1,19 @@
+{
+  "name": "SOAP getUser — user found",
+  "request": {
+    "method": "POST",
+    "url": "/ws",
+    "bodyPatterns": [
+      {
+        "matchesXPath": "//*[local-name()='getUserRequest']/*[local-name()='id'][text()='user-contract-1']"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "text/xml;charset=UTF-8"
+    },
+    "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Body><tns:getUserResponse xmlns:tns=\"http://kathelan.pl/soap/users\"><tns:user><tns:id>user-contract-1</tns:id><tns:firstName>Jan</tns:firstName><tns:lastName>Kowalski</tns:lastName><tns:email>jan.kowalski@contract.pl</tns:email><tns:address><tns:street>ul. Kontraktowa 1</tns:street><tns:city>Warsaw</tns:city><tns:zipCode>00-001</tns:zipCode><tns:country>Poland</tns:country></tns:address></tns:user></tns:getUserResponse></soapenv:Body></soapenv:Envelope>"
+  }
+}

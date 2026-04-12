@@ -23,6 +23,47 @@
             <groupId>pl.kathelan</groupId>
             <artifactId>soap-service-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.wiremock</groupId>
+            <artifactId>wiremock-standalone</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>1.17.4</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-junit5-plugin</artifactId>
+                        <version>1.2.1</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <targetClasses>
+                        <param>pl.kathelan.user.*</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>pl.kathelan.user.*</param>
+                    </targetTests>
+                    <excludedClasses>
+                        <param>pl.kathelan.user.UserServiceApplication</param>
+                        <param>pl.kathelan.user.config.*</param>
+                    </excludedClasses>
+                    <excludedTestClasses>
+                        <param>pl.kathelan.user.contract.*</param>
+                    </excludedTestClasses>
+                    <outputFormats>
+                        <outputFormat>HTML</outputFormat>
+                    </outputFormats>
+                    <timestampedReports>false</timestampedReports>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

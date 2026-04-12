@@ -1,0 +1,19 @@
+{
+  "name": "SOAP getUsersByCity — Warsaw",
+  "request": {
+    "method": "POST",
+    "url": "/ws",
+    "bodyPatterns": [
+      {
+        "matchesXPath": "//*[local-name()='getUsersByCityRequest']/*[local-name()='city'][text()='Warsaw']"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "text/xml;charset=UTF-8"
+    },
+    "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Body><tns:getUsersByCityResponse xmlns:tns=\"http://kathelan.pl/soap/users\"><tns:users><tns:id>id-1</tns:id><tns:firstName>Jan</tns:firstName><tns:lastName>Kowalski</tns:lastName><tns:email>jan@contract.pl</tns:email><tns:address><tns:street>ul. Warszawska 1</tns:street><tns:city>Warsaw</tns:city><tns:zipCode>00-001</tns:zipCode><tns:country>Poland</tns:country></tns:address></tns:users><tns:users><tns:id>id-2</tns:id><tns:firstName>Maria</tns:firstName><tns:lastName>Wisniewski</tns:lastName><tns:email>maria@contract.pl</tns:email><tns:address><tns:street>ul. Warszawska 2</tns:street><tns:city>Warsaw</tns:city><tns:zipCode>00-002</tns:zipCode><tns:country>Poland</tns:country></tns:address></tns:users></tns:getUsersByCityResponse></soapenv:Body></soapenv:Envelope>"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "SOAP createUser — success",
+  "request": {
+    "method": "POST",
+    "url": "/ws",
+    "bodyPatterns": [
+      {
+        "matchesXPath": "//*[local-name()='createUserRequest']/*[local-name()='email'][text()='new.user@contract.pl']"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "text/xml;charset=UTF-8"
+    },
+    "body": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"><soapenv:Body><tns:createUserResponse xmlns:tns=\"http://kathelan.pl/soap/users\"><tns:user><tns:id>created-id-1</tns:id><tns:firstName>Anna</tns:firstName><tns:lastName>Nowak</tns:lastName><tns:email>new.user@contract.pl</tns:email><tns:address><tns:street>ul. Nowa 1</tns:street><tns:city>Krakow</tns:city><tns:zipCode>30-001</tns:zipCode><tns:country>Poland</tns:country></tns:address></tns:user></tns:createUserResponse></soapenv:Body></soapenv:Envelope>"
+  }
+}
