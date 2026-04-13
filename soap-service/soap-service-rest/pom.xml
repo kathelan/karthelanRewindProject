@@ -60,6 +60,43 @@
                     <classifier>exec</classifier>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <version>1.17.4</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-junit5-plugin</artifactId>
+                        <version>1.2.1</version>
+                    </dependency>
+                </dependencies>
+                <configuration>
+                    <targetClasses>
+                        <param>pl.kathelan.soap.*</param>
+                    </targetClasses>
+                    <targetTests>
+                        <param>pl.kathelan.soap.*</param>
+                    </targetTests>
+                    <excludedClasses>
+                        <param>pl.kathelan.soap.SoapServiceApplication</param>
+                        <param>pl.kathelan.soap.config.*</param>
+                    </excludedClasses>
+                    <excludedTestClasses>
+                        <param>pl.kathelan.soap.user.endpoint.*</param>
+                        <param>pl.kathelan.soap.push.endpoint.*</param>
+                        <param>pl.kathelan.soap.security.*</param>
+                        <param>pl.kathelan.soap.validation.*</param>
+                        <param>pl.kathelan.soap.wsdl.*</param>
+                        <param>pl.kathelan.soap.push.simulator.*</param>
+                        <param>pl.kathelan.soap.contract.*</param>
+                    </excludedTestClasses>
+                    <outputFormats>
+                        <outputFormat>HTML</outputFormat>
+                    </outputFormats>
+                    <timestampedReports>false</timestampedReports>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

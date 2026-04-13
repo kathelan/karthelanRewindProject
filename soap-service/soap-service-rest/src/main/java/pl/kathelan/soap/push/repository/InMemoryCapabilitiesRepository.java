@@ -27,4 +27,9 @@ public class InMemoryCapabilitiesRepository implements CapabilitiesRepository {
         store.put(capabilities.getUserId(), capabilities);
         log.debug("save: userId={}", capabilities.getUserId());
     }
+
+    public void clear() {
+        store.clear();
+        log.info("clear: capabilities repository cleared");
+    }
 }

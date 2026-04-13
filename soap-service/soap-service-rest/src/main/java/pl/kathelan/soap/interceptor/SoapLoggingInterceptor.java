@@ -54,7 +54,7 @@ public class SoapLoggingInterceptor implements EndpointInterceptor {
         return PASSWORD_PATTERN.matcher(xml).replaceAll("$1****$2");
     }
 
-    private String toXml(WebServiceMessage message) {
+    String toXml(WebServiceMessage message) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             message.writeTo(out);

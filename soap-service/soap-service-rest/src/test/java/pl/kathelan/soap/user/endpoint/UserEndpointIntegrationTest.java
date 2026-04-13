@@ -1,6 +1,8 @@
 package pl.kathelan.soap.user.endpoint;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,8 +20,18 @@ import static org.springframework.ws.test.server.RequestCreators.withSoapEnvelop
 import static org.springframework.ws.test.server.ResponseMatchers.noFault;
 import static org.springframework.ws.test.server.ResponseMatchers.xpath;
 
+/**
+ * UserEndpoint — integration tests for the SOAP user operations endpoint.
+ *
+ * <p>Tests verify the full Spring-WS stack (endpoint, mapper, repository) using
+ * {@link MockWebServiceClient}. WS-Security UsernameToken header is included in every
+ * request to satisfy the authentication interceptor configured in {@code WsSecurityConfig}.
+ *
+ * <p>Profile {@code local} activates in-memory repositories, so no external dependencies are needed.
+ */
 @SpringBootTest
 @ActiveProfiles("local")
+@DisplayName("UserEndpoint — SOAP user operations integration")
 class UserEndpointIntegrationTest {
 
     private static final String NS = "http://kathelan.pl/soap/users";
@@ -43,90 +55,140 @@ class UserEndpointIntegrationTest {
         client = MockWebServiceClient.createClient(context);
     }
 
-    @Test
-    void shouldCreateUser() throws Exception {
-        client.sendRequest(withSoapEnvelope(envelope("""
-                <tns:createUserRequest xmlns:tns="%s">
-                    <tns:firstName>Jan</tns:firstName>
-                    <tns:lastName>Kowalski</tns:lastName>
-                    <tns:email>jan@example.com</tns:email>
-                    <tns:address>
-                        <tns:street>ul. Testowa 1</tns:street>
-                        <tns:city>Warsaw</tns:city>
-                        <tns:zipCode>00-001</tns:zipCode>
-                        <tns:country>Poland</tns:country>
-                    </tns:address>
-                </tns:createUserRequest>
-                """.formatted(NS))))
-                .andExpect(noFault())
-                .andExpect(xpath("//tns:createUserResponse/tns:user/tns:id", NS_MAP).exists())
-                .andExpect(xpath("//tns:createUserResponse/tns:user/tns:email", NS_MAP).evaluatesTo("jan@example.com"))
-                .andExpect(xpath("//tns:createUserResponse/tns:user/tns:address/tns:city", NS_MAP).evaluatesTo("Warsaw"))
-                .andExpect(xpath("//tns:createUserResponse/tns:errorCode", NS_MAP).doesNotExist());
+    // ===== createUser =====
+
+    @Nested
+    @DisplayName("createUser — creating a new user via SOAP")
+    class CreateUser {
+
+        /**
+         * Happy path: a valid createUserRequest with all required fields must return
+         * a response containing a non-empty {@code id}, the submitted email, and the address city.
+         * No {@code errorCode} element should be present in the response.
+         */
+        @Test
+        @DisplayName("returns created user with id and no errorCode for valid request")
+        void shouldCreateUser() throws Exception {
+            client.sendRequest(withSoapEnvelope(envelope("""
+                    <tns:createUserRequest xmlns:tns="%s">
+                        <tns:firstName>Jan</tns:firstName>
+                        <tns:lastName>Kowalski</tns:lastName>
+                        <tns:email>jan@example.com</tns:email>
+                        <tns:address>
+                            <tns:street>ul. Testowa 1</tns:street>
+                            <tns:city>Warsaw</tns:city>
+                            <tns:zipCode>00-001</tns:zipCode>
+                            <tns:country>Poland</tns:country>
+                        </tns:address>
+                    </tns:createUserRequest>
+                    """.formatted(NS))))
+                    .andExpect(noFault())
+                    .andExpect(xpath("//tns:createUserResponse/tns:user/tns:id", NS_MAP).exists())
+                    .andExpect(xpath("//tns:createUserResponse/tns:user/tns:email", NS_MAP).evaluatesTo("jan@example.com"))
+                    .andExpect(xpath("//tns:createUserResponse/tns:user/tns:address/tns:city", NS_MAP).evaluatesTo("Warsaw"))
+                    .andExpect(xpath("//tns:createUserResponse/tns:errorCode", NS_MAP).doesNotExist());
+        }
+
+        /**
+         * Duplicate email scenario: when a user with the same email already exists,
+         * the endpoint must respond with {@code USER_ALREADY_EXISTS} error code and no user element,
+         * instead of overwriting or silently accepting the duplicate.
+         */
+        @Test
+        @DisplayName("returns USER_ALREADY_EXISTS and no user when email is already taken")
+        void shouldReturnErrorOnDuplicateEmail() throws Exception {
+            saveUser("dup@example.com", "Warsaw");
+
+            client.sendRequest(withSoapEnvelope(envelope("""
+                    <tns:createUserRequest xmlns:tns="%s">
+                        <tns:firstName>Other</tns:firstName>
+                        <tns:lastName>Person</tns:lastName>
+                        <tns:email>dup@example.com</tns:email>
+                        <tns:address>
+                            <tns:street>ul. Inna 2</tns:street>
+                            <tns:city>Krakow</tns:city>
+                            <tns:zipCode>30-001</tns:zipCode>
+                            <tns:country>Poland</tns:country>
+                        </tns:address>
+                    </tns:createUserRequest>
+                    """.formatted(NS))))
+                    .andExpect(noFault())
+                    .andExpect(xpath("//tns:createUserResponse/tns:errorCode", NS_MAP).evaluatesTo("USER_ALREADY_EXISTS"))
+                    .andExpect(xpath("//tns:createUserResponse/tns:user", NS_MAP).doesNotExist());
+        }
     }
 
-    @Test
-    void shouldGetUserById() throws Exception {
-        String id = saveUser("anna@example.com", "Warsaw");
+    // ===== getUser =====
 
-        client.sendRequest(withSoapEnvelope(envelope("""
-                <tns:getUserRequest xmlns:tns="%s">
-                    <tns:id>%s</tns:id>
-                </tns:getUserRequest>
-                """.formatted(NS, id))))
-                .andExpect(noFault())
-                .andExpect(xpath("//tns:getUserResponse/tns:user/tns:email", NS_MAP).evaluatesTo("anna@example.com"))
-                .andExpect(xpath("//tns:getUserResponse/tns:errorCode", NS_MAP).doesNotExist());
+    @Nested
+    @DisplayName("getUser — fetching a single user by ID")
+    class GetUser {
+
+        /**
+         * Happy path: when a user exists in the repository, a getUser request with that
+         * user's ID must return the correct email and no errorCode.
+         */
+        @Test
+        @DisplayName("returns user data for an existing user id")
+        void shouldGetUserById() throws Exception {
+            String id = saveUser("anna@example.com", "Warsaw");
+
+            client.sendRequest(withSoapEnvelope(envelope("""
+                    <tns:getUserRequest xmlns:tns="%s">
+                        <tns:id>%s</tns:id>
+                    </tns:getUserRequest>
+                    """.formatted(NS, id))))
+                    .andExpect(noFault())
+                    .andExpect(xpath("//tns:getUserResponse/tns:user/tns:email", NS_MAP).evaluatesTo("anna@example.com"))
+                    .andExpect(xpath("//tns:getUserResponse/tns:errorCode", NS_MAP).doesNotExist());
+        }
+
+        /**
+         * Not-found scenario: requesting a user by an ID that does not exist in the store
+         * must return {@code USER_NOT_FOUND} error code and no user element,
+         * rather than throwing an uncaught exception or returning a SOAP fault.
+         */
+        @Test
+        @DisplayName("returns USER_NOT_FOUND and no user for an unknown id")
+        void shouldReturnErrorWhenUserNotFound() throws Exception {
+            client.sendRequest(withSoapEnvelope(envelope("""
+                    <tns:getUserRequest xmlns:tns="%s">
+                        <tns:id>nonexistent-id</tns:id>
+                    </tns:getUserRequest>
+                    """.formatted(NS))))
+                    .andExpect(noFault())
+                    .andExpect(xpath("//tns:getUserResponse/tns:errorCode", NS_MAP).evaluatesTo("USER_NOT_FOUND"))
+                    .andExpect(xpath("//tns:getUserResponse/tns:user", NS_MAP).doesNotExist());
+        }
     }
 
-    @Test
-    void shouldReturnErrorWhenUserNotFound() throws Exception {
-        client.sendRequest(withSoapEnvelope(envelope("""
-                <tns:getUserRequest xmlns:tns="%s">
-                    <tns:id>nonexistent-id</tns:id>
-                </tns:getUserRequest>
-                """.formatted(NS))))
-                .andExpect(noFault())
-                .andExpect(xpath("//tns:getUserResponse/tns:errorCode", NS_MAP).evaluatesTo("USER_NOT_FOUND"))
-                .andExpect(xpath("//tns:getUserResponse/tns:user", NS_MAP).doesNotExist());
-    }
+    // ===== getUsersByCity =====
 
-    @Test
-    void shouldReturnErrorOnDuplicateEmail() throws Exception {
-        saveUser("dup@example.com", "Warsaw");
+    @Nested
+    @DisplayName("getUsersByCity — searching users by city")
+    class GetUsersByCity {
 
-        client.sendRequest(withSoapEnvelope(envelope("""
-                <tns:createUserRequest xmlns:tns="%s">
-                    <tns:firstName>Other</tns:firstName>
-                    <tns:lastName>Person</tns:lastName>
-                    <tns:email>dup@example.com</tns:email>
-                    <tns:address>
-                        <tns:street>ul. Inna 2</tns:street>
-                        <tns:city>Krakow</tns:city>
-                        <tns:zipCode>30-001</tns:zipCode>
-                        <tns:country>Poland</tns:country>
-                    </tns:address>
-                </tns:createUserRequest>
-                """.formatted(NS))))
-                .andExpect(noFault())
-                .andExpect(xpath("//tns:createUserResponse/tns:errorCode", NS_MAP).evaluatesTo("USER_ALREADY_EXISTS"))
-                .andExpect(xpath("//tns:createUserResponse/tns:user", NS_MAP).doesNotExist());
-    }
+        /**
+         * City filter: when multiple users exist in different cities, only users
+         * whose address matches the requested city should be returned.
+         * Users from other cities must be excluded from the result set.
+         */
+        @Test
+        @DisplayName("returns only users from the requested city, excluding other cities")
+        void shouldGetUsersByCity() throws Exception {
+            saveUser("city1@example.com", "Gdansk");
+            saveUser("city2@example.com", "Gdansk");
+            saveUser("city3@example.com", "Poznan");
 
-    @Test
-    void shouldGetUsersByCity() throws Exception {
-        saveUser("city1@example.com", "Gdansk");
-        saveUser("city2@example.com", "Gdansk");
-        saveUser("city3@example.com", "Poznan");
-
-        client.sendRequest(withSoapEnvelope(envelope("""
-                <tns:getUsersByCityRequest xmlns:tns="%s">
-                    <tns:city>Gdansk</tns:city>
-                </tns:getUsersByCityRequest>
-                """.formatted(NS))))
-                .andExpect(noFault())
-                .andExpect(xpath("count(//tns:getUsersByCityResponse/tns:users)", NS_MAP).evaluatesTo(2))
-                .andExpect(xpath("//tns:getUsersByCityResponse/tns:errorCode", NS_MAP).doesNotExist());
+            client.sendRequest(withSoapEnvelope(envelope("""
+                    <tns:getUsersByCityRequest xmlns:tns="%s">
+                        <tns:city>Gdansk</tns:city>
+                    </tns:getUsersByCityRequest>
+                    """.formatted(NS))))
+                    .andExpect(noFault())
+                    .andExpect(xpath("count(//tns:getUsersByCityResponse/tns:users)", NS_MAP).evaluatesTo(2))
+                    .andExpect(xpath("//tns:getUsersByCityResponse/tns:errorCode", NS_MAP).doesNotExist());
+        }
     }
 
     // ===== helpers =====
