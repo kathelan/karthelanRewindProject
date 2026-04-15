@@ -60,8 +60,6 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <configuration>
-                        <fork>true</fork>
-                        <executable>/Users/apple/Library/Java/JavaVirtualMachines/temurin-21.0.10/Contents/Home/bin/javac</executable>
                         <annotationProcessorPaths>
                             <path>
                                 <groupId>org.projectlombok</groupId>
